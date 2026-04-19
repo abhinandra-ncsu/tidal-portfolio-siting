@@ -1,0 +1,19 @@
+# Intellectual property — keep local
+methodology/
+
+# Third-party tidal dataset (obtain separately, see README)
+inputs/roms/tide_data_east.dbf
+
+# Python env
+.venv/
+__pycache__/
+*.pyc
+
+# Generated outputs
+results/
+
+# Solver artifacts
+gurobi.log
+
+# OS junk
+.DS_Store

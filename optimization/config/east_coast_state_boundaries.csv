@@ -1,0 +1,16 @@
+State,North_Boundary,South_Boundary,East_Boundary,West_Boundary
+New_York_coastline,45.0994,40.4394,-70.6319,-74.7130
+South_Carolina_coastline,33.8953,31.9463,-77.4033,-80.9648
+Virginia_coastline,38.9019,36.4494,-74.0458,-77.3587
+Georgia_coastline,32.1228,30.6123,-79.7544,-81.5334
+Connecticut_coastline,41.3663,40.9262,-70.5408,-73.7245
+New_Hampshire_coastline,43.1347,42.7777,-69.4069,-70.8638
+Maine_coastline,45.2332,42.9842,-65.6346,-70.7545
+Delaware_coastline,39.8564,38.3536,-73.8840,-75.8806
+New_Jersey_coastline,41.1070,38.9244,-72.6921,-75.6052
+Massachusetts_coastline,42.9656,41.2393,-68.7148,-71.3963
+North_Carolina_coastline,36.6498,33.8284,-74.3465,-78.6640
+Florida_coastline,30.8175,24.5425,-79.0147,-87.5815
+Maryland_coastline,39.6042,37.8693,-73.8913,-77.3587
+Rhode_Island_coastline,41.8188,41.1458,-69.8185,-71.9742
+Pennsylvania_coastline,40.0163,39.7153,-73.8497,-75.4914
