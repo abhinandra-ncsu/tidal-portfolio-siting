@@ -104,11 +104,11 @@ The constraint is linear in x. The only quadratic term in the BQP is the varianc
 
 ## Numerical sanity check (N = 100)
 
-Verified during pipeline development:
+Verified 2026-05-03 against the post-2026-05-02 cable-laying fix:
 
 - C_const(100) ≈ $43.5M/yr (device manufacturing learning-curve avg ≈ $1.85M/device vs $3.18M unit-1)
-- c_site_i at d = 0.3 km shore: ≈ $15k/yr (cable purchase modest at smallest CSA)
-- c_site_i at d = 5.0 km shore: ≈ $407k/yr (cable purchase scales with distance × CSA step-up)
+- c_site_i at d = 0.3 km shore: ≈ $22k/yr (cable purchase modest at 150 mm² CSA; laying $52.5k dominates)
+- c_site_i at d = 5.0 km shore: ≈ $514k/yr (1000 mm² CSA cable + $876k laying cascade)
 
 These produce achievable LCOEs of $700–$1500/MWh in the configured sweep.
 
