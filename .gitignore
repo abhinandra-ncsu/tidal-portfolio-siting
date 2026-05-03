@@ -1,5 +1,6 @@
-# Intellectual property — keep local
-methodology/
+# Drafts and ongoing experimental work — keep local
+experiments/
+writing/
 
 # Third-party tidal dataset (obtain separately, see README)
 inputs/roms/tide_data_east.dbf
@@ -11,9 +12,13 @@ __pycache__/
 
 # Generated outputs
 results/
+results.pre-reorg/
 
 # Solver artifacts
 gurobi.log
+
+# Office temp lock files
+~$*
 
 # OS junk
 .DS_Store

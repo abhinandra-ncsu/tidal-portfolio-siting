@@ -1,11 +1,12 @@
-%% Compute Power Covariance Matrix (Step 4)
+%% Compute Power Covariance Matrix (Step 4) - ORPC TidGen 2.0
 %
-% Reconstructs power timeseries for candidate sites, computes the
-% covariance matrix needed for the portfolio optimization objective.
+% Reconstructs power timeseries for candidate sites using the SCM-tabulated
+% power curve, computes the covariance matrix needed for the portfolio
+% optimization objective.
 %
-% Input:  ../results/candidates.nc  (from 03_screen_candidates.py)
-%         ../results/harmonics.nc   (from 01_extract_harmonics.py)
-% Output: ../results/covariance.nc
+% Input:  results/orpc/<group>/candidates.nc  (from 03_screen_candidates.py)
+%         results/orpc/<group>/harmonics.nc   (from 01_extract_harmonics.py)
+% Output: results/orpc/<group>/covariance.nc
 %
 % Requires: T_TIDE v1.5beta, Parallel Computing Toolbox
 
@@ -23,8 +24,22 @@ if ~exist('t_predic', 'file')
     fprintf('Added T_TIDE: %s\n', ttideDir);
 end
 
-resultsDir = fullfile(scriptDir, '..', 'results');
+envResults = getenv('TIDAL_RESULTS_DIR');
+if ~isempty(envResults)
+    resultsDir = envResults;
+else
+    envGroup = getenv('TIDAL_GROUP');
+    envState = getenv('TIDAL_STATE');
+    if ~isempty(envGroup)
+        resultsDir = fullfile(scriptDir, '..', '..', 'results', 'orpc', 'groups', envGroup);
+    elseif ~isempty(envState) && ~contains(envState, ',')
+        resultsDir = fullfile(scriptDir, '..', '..', 'results', 'orpc', 'states', envState);
+    else
+        resultsDir = fullfile(scriptDir, '..', '..', 'results', 'orpc', 'groups', 'pooled');
+    end
+end
 if ~exist(resultsDir, 'dir'), mkdir(resultsDir); end
+fprintf('Results dir: %s\n', resultsDir);
 candidatesFile = fullfile(resultsDir, 'candidates.nc');
 harmonicsFile  = fullfile(resultsDir, 'harmonics.nc');
 outputFile     = fullfile(resultsDir, 'covariance.nc');
@@ -34,18 +49,18 @@ if exist(outputFile, 'file')
     return;
 end
 
-%% VP Gen5 power curve (Lewis et al. 2021)
+%% ORPC TidGen 2.0 power curve (SCM-tabulated, MHKDR 269)
 cfg = config();
 
-RHO      = cfg.RHO;
-AREA     = cfg.AREA;
-CP       = cfg.CP;
-V_CUT_IN = cfg.V_CUT_IN;
-V_RATED  = cfg.V_RATED;
-P_RATED  = cfg.P_RATED;
+V_CUT_IN      = cfg.V_CUT_IN;
+V_RATED       = cfg.V_RATED;
+V_PLATEAU_END = cfg.V_PLATEAU_END;
+P_RATED       = cfg.P_RATED;
+SCM_SPEEDS    = cfg.SCM_SPEEDS;
+SCM_POWER_W   = cfg.SCM_POWER_W;
 
-fprintf('Power curve: cut-in=%.2f, rated=%.2f m/s, P_rated=%.0f W\n', ...
-    V_CUT_IN, V_RATED, P_RATED);
+fprintf('Power curve: SCM-tabulated 0.5-3.0 m/s, plateau to %.1f m/s, cutout past, P_rated=%.0f W\n', ...
+    V_PLATEAU_END, P_RATED);
 
 %% Load candidates
 fprintf('\nLoading candidates: %s\n', candidatesFile);
@@ -139,12 +154,12 @@ parfor i = 1:n_cand
 
     speed = abs(v_pred);
 
-    % Apply power curve
-    power = zeros(n_times, 1, 'single');
-    cubic = (speed >= V_CUT_IN) & (speed <= V_RATED);
-    power(cubic) = single(0.5 * RHO * AREA * CP * speed(cubic).^3);
-    rated = (speed > V_RATED);
-    power(rated) = single(P_RATED);
+    % Apply ORPC power curve: SCM table 0.5-3.0, plateau 3.0-3.5, zero past 3.5
+    power = single(interp1(SCM_SPEEDS, SCM_POWER_W, speed, 'linear', 0));
+    plateau = (speed > V_RATED) & (speed <= V_PLATEAU_END);
+    power(plateau) = single(P_RATED);
+    power(speed < V_CUT_IN) = 0;
+    power(speed > V_PLATEAU_END) = 0;
 
     power_matrix(:, i) = power;
 end
@@ -188,7 +203,7 @@ ncwriteatt(outputFile, '/', 'n_candidates', int32(n_cand));
 ncwriteatt(outputFile, '/', 'n_timesteps', int32(n_times));
 ncwriteatt(outputFile, '/', 'reconstruction_year', '2013');
 ncwriteatt(outputFile, '/', 'time_step_hours', int32(1));
-ncwriteatt(outputFile, '/', 'power_curve', sprintf('VP Gen5 Lewis: Cp=%.2f, Vci=%.2f, Vr=%.2f m/s', CP, V_CUT_IN, V_RATED));
+ncwriteatt(outputFile, '/', 'power_curve', sprintf('ORPC TidGen 2.0 (SCM-tabulated): Vci=%.2f, Vr=%.2f, Vplateau_end=%.2f m/s', V_CUT_IN, V_RATED, V_PLATEAU_END));
 ncwriteatt(outputFile, '/', 'P_rated_W', P_RATED);
 ncwriteatt(outputFile, '/', 'constituents', strjoin(valid_names, ', '));
 ncwriteatt(outputFile, '/', 'created', datestr(now, 'yyyy-mm-ddTHH:MM:SS'));

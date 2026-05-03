@@ -22,10 +22,12 @@ import xarray as xr
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+from config.config import get_results_dir
 
-RESULTS_DIR = os.path.join(ROOT_DIR, "results")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
+
+RESULTS_DIR = get_results_dir()
 RESULTS_PATH = os.path.join(RESULTS_DIR, "optimization_results.nc")
 COVARIANCE_PATH = os.path.join(RESULTS_DIR, "covariance.nc")
 SHORELINE_PATH = os.path.join(ROOT_DIR, "inputs", "geography", "NOAA_MedRes", "allus80k.shp")
@@ -58,6 +60,9 @@ def get_optimal_targets(res):
 def plot_spatial_maps(res, shoreline):
     """One separate figure per LCOE target."""
     target_idx, target_lcoe = get_optimal_targets(res)
+    if len(target_idx) == 0:
+        print("  Skipped: no optimal solutions")
+        return
     lat = res["latitude"].values
     lon = res["longitude"].values
     cf = res["capacity_factor"].values
@@ -105,6 +110,9 @@ def plot_spatial_maps(res, shoreline):
 def plot_pareto(res):
     """Achieved LCOE vs portfolio variance tradeoff curve."""
     target_idx, target_lcoe = get_optimal_targets(res)
+    if len(target_idx) == 0:
+        print("  Skipped: no optimal solutions")
+        return
     variance = res["variance"].values[target_idx]
     achieved = res["achieved_lcoe"].values[target_idx]
 
@@ -137,6 +145,9 @@ def plot_pareto(res):
 def plot_correlation_heatmaps(res, Sigma):
     """Correlation matrices for selected sites at tight and loose LCOE targets."""
     target_idx, target_lcoe = get_optimal_targets(res)
+    if len(target_idx) == 0:
+        print("  Skipped: no optimal solutions")
+        return
 
     # Pick tightest and loosest targets
     picks = [0, len(target_idx) - 1]
@@ -186,6 +197,9 @@ def plot_correlation_heatmaps(res, Sigma):
 def plot_cost_breakdown(res):
     """Stacked bars: C_const vs total site costs for each LCOE target."""
     target_idx, target_lcoe = get_optimal_targets(res)
+    if len(target_idx) == 0:
+        print("  Skipped: no optimal solutions")
+        return
     c_const = res.attrs["C_const"]
     c_site_all = res["c_site"].values
     energy_all = res["energy_mwh"].values

@@ -19,16 +19,16 @@ import pandas as pd
 import xarray as xr
 from dbfread import DBF
 
-from config.config import MIN_DEPTH_M, BBOX_BUFFER_DEG
+from config.config import MIN_DEPTH_M, BBOX_BUFFER_DEG, STATES, GROUP, get_results_dir
 
 # --- Paths ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
 DBF_PATH = os.path.join(ROOT_DIR, "inputs", "roms", "tide_data_east.dbf")
 BOUNDARIES_CSV = os.path.join(SCRIPT_DIR, "config", "east_coast_state_boundaries.csv")
 
-RESULTS_DIR = os.path.join(ROOT_DIR, "results")
+RESULTS_DIR = get_results_dir()
 OUTPUT_PATH = os.path.join(RESULTS_DIR, "harmonics.nc")
 
 # --- Parameters ---
@@ -44,9 +44,23 @@ FIELD_PREFIXES = {
 }
 
 
-def load_bounding_boxes(csv_path, buffer_deg):
-    """Load state bounding boxes. Returns list of (south, north, west, east)."""
+def load_bounding_boxes(csv_path, buffer_deg, states=None):
+    """Load state bounding boxes. Returns list of (south, north, west, east).
+
+    If `states` is a non-empty list, only those rows are kept (each must match
+    the `State` column). If None/empty, all rows are returned.
+    """
     df = pd.read_csv(csv_path)
+    if states:
+        df = df[df["State"].isin(states)]
+        missing = set(states) - set(pd.read_csv(csv_path)["State"])
+        if missing:
+            raise ValueError(
+                f"Unknown state(s): {sorted(missing)}. "
+                f"Available: {sorted(pd.read_csv(csv_path)['State'].tolist())}"
+            )
+        if df.empty:
+            raise ValueError(f"No rows matched states={states}")
     boxes = []
     for _, row in df.iterrows():
         boxes.append((
@@ -177,8 +191,15 @@ def main():
         print("Delete it to re-extract.")
         return
 
+    if GROUP:
+        print(f"Group: {GROUP} — states: {STATES}")
+    elif STATES:
+        print(f"State: {STATES[0]}")
+    else:
+        print("State: pooled (all east coast)")
+    print(f"Results dir: {RESULTS_DIR}")
     print(f"Min depth: {MIN_DEPTH_M} m")
-    boxes = load_bounding_boxes(BOUNDARIES_CSV, BBOX_BUFFER_DEG)
+    boxes = load_bounding_boxes(BOUNDARIES_CSV, BBOX_BUFFER_DEG, states=STATES)
     print(f"Loaded {len(boxes)} bounding boxes (buffer: {BBOX_BUFFER_DEG} deg)")
 
     print("Streaming DBF...")

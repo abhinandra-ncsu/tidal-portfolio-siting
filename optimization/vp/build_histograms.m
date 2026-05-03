@@ -22,8 +22,22 @@ if ~exist('t_predic', 'file')
     fprintf('Added T_TIDE: %s\n', ttideDir);
 end
 
-resultsDir = fullfile(scriptDir, '..', 'results');
+envResults = getenv('TIDAL_RESULTS_DIR');
+if ~isempty(envResults)
+    resultsDir = envResults;
+else
+    envGroup = getenv('TIDAL_GROUP');
+    envState = getenv('TIDAL_STATE');
+    if ~isempty(envGroup)
+        resultsDir = fullfile(scriptDir, '..', '..', 'results', 'vp', 'groups', envGroup);
+    elseif ~isempty(envState) && ~contains(envState, ',')
+        resultsDir = fullfile(scriptDir, '..', '..', 'results', 'vp', 'states', envState);
+    else
+        resultsDir = fullfile(scriptDir, '..', '..', 'results', 'vp', 'groups', 'pooled');
+    end
+end
 if ~exist(resultsDir, 'dir'), mkdir(resultsDir); end
+fprintf('Results dir: %s\n', resultsDir);
 inputFile  = fullfile(resultsDir, 'harmonics.nc');
 outputFile = fullfile(resultsDir, 'histograms.nc');
 

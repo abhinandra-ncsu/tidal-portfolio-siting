@@ -1,25 +1,24 @@
 """
-Step 5: Tidal portfolio optimization.
+Step 5: ORPC TidGen 2.0 portfolio optimization.
 
 Computes all cost and energy inputs from the documented formulas, then
 solves the Binary Quadratic Program:
 
     min   x^T Sigma x                              (portfolio variance)
-    s.t.  sum(x_i) = N                             (deploy N TriFrames)
+    s.t.  sum(x_i) = N                             (deploy N devices)
           C_const(N) + sum x_i (c_site_i - L*E_i) <= 0   (LCOE ceiling)
           x_i in {0,1}
 
-Input:  ../results/candidates.nc  (from 03_screen_candidates.py)
-        ../results/covariance.nc  (from compute_covariance.m)
-Output: ../results/optimization_results.nc
+Input:  results/orpc/<group>/candidates.nc  (from 03_screen_candidates.py)
+        results/orpc/<group>/covariance.nc  (from compute_covariance.m)
+Output: results/orpc/<group>/optimization_results.nc
 
-References:
-    - optimization_formulation.md
-    - cost/optimization_cost_structure.md
+References (in optimization/orpc/methodology/):
+    - turbine_design_specification.md
     - cost/capex/capex_cost_components.md
     - cost/capex/installation/methodology.md
+    - cost/capex/electrical/methodology.md
     - cost/opex/opex_cost_components.md
-    - energy/methodology.md
 """
 
 import os
@@ -31,17 +30,19 @@ import xarray as xr
 
 from config.config import (
     # Turbine
-    P_TURBINE_KW, TURBINES_PER_TF, P_TRIFRAME_KW,
-    RHO, AREA, CP, V_CUT_IN, V_RATED,
+    P_TURBINE_KW, DEVICES_PER_SITE, P_DEVICE_KW,
+    SCM_SPEEDS_MS, SCM_POWER_KW,
+    V_CUT_IN, V_RATED, V_PLATEAU_END,
     # Energy
     HOURS_PER_YEAR, ETA_AVAIL,
     # Electrical
-    MAX_LOSS, CABLES,
+    MAX_LOSS, CABLES, ONSHORE_INVERTER_COST,
     # Cost — device
     C_DEVICE_UNIT1, LEARNING_EXP,
-    # Cost — installation
-    JACKUP_DAY_RATE, CLV_DAY_RATE, PLACEMENT_DAYS_PER_TF, TRANSIT_DAYS,
-    SURFACE_SPEED_KMH, BURIAL_SPEED_KMH, SURFACE_FRACTION, BURIAL_FRACTION,
+    # Cost — installation (ORPC: 3-phase tug + multicat + per-meter cable)
+    TUG_DAY_RATE, MULTICAT_DAY_RATE,
+    TUG_DAYS_PER_DEVICE, MULTICAT_DAYS_PER_DEVICE, TRANSIT_DAYS,
+    MOORING_MAT_PER_DEVICE, CABLE_INST_PER_KM,
     # Cost — percentages
     SUBSYS_FRAC, CONTIN_FRAC, EC_FRAC, INSURE_FRAC,
     # Cost — OpEx
@@ -52,20 +53,22 @@ from config.config import (
     P_TARGET_MW, LCOE_TARGETS,
     # Solver
     GUROBI_TIME_LIMIT, GUROBI_MIP_GAP,
+    get_results_dir,
 )
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
-RESULTS_DIR = os.path.join(ROOT_DIR, "results")
+RESULTS_DIR = get_results_dir()
 
 CANDIDATES_PATH = os.path.join(RESULTS_DIR, "candidates.nc")
 COVARIANCE_PATH = os.path.join(RESULTS_DIR, "covariance.nc")
 RESULTS_PATH = os.path.join(RESULTS_DIR, "optimization_results.nc")
 
-# Loss formula: 3 * I^2 * R * L / P = 0.505 * R * L
-# I = 133 A (from P=105kW, V=480V, PF=0.95)
-LOSS_COEFF = 0.505
+# DC monopolar loss: 2 * I^2 * R * L / P
+# I = 500 A, P = 500 kW => coefficient = 2*500^2/500_000 = 1.0
+# So % loss = R(Ω/km) * L(km), matching electrical/source_data.md table.
+LOSS_COEFF = 1.0
 
 
 # =========================================================================
@@ -85,70 +88,71 @@ def select_cable(distance_km):
 
 def compute_energy(hist, centers, loss):
     """
-    Annual energy delivered per TriFrame at a site (MWh/yr).
+    Annual energy delivered per device at a site (MWh/yr).
 
-    E_i = (8766/1000) * eta_avail * (1-loss) * n_t
-          * sum_k P(u_k) * p_i(u_k)
+    E_i = (8766/1000) * eta_avail * (1-loss) * sum_k P(u_k) * p_i(u_k)
 
-    where sum_k P(u_k)*p_i(u_k) is mean power per turbine in W.
-    Drivetrain efficiencies are omitted because Lewis et al. (2021) Cp
-    is a system Cp (already net of gearbox/generator losses) — see
-    docs/energy/methodology.md.
+    Power curve is the SCM-tabulated electrical curve (0.5-3.0 m/s),
+    plateau 3.0-3.5 m/s at rated, zero outside. SCM gives net electrical
+    power, so no separate drivetrain efficiency is applied.
     """
-    # Power at each speed bin center (W)
-    power_curve = np.zeros(len(centers))
-    for k, v in enumerate(centers):
-        if v < V_CUT_IN:
-            power_curve[k] = 0.0
-        elif v <= V_RATED:
-            power_curve[k] = 0.5 * RHO * AREA * CP * v**3
-        else:
-            power_curve[k] = P_TURBINE_KW * 1000  # 35,000 W
+    speeds = np.asarray(centers, dtype=float)
+    power_w = np.interp(speeds, SCM_SPEEDS_MS, SCM_POWER_KW,
+                        left=0.0, right=P_TURBINE_KW) * 1000.0
+    power_w[speeds < V_CUT_IN] = 0.0
+    power_w[speeds > V_PLATEAU_END] = 0.0
 
-    mean_power_w = hist @ power_curve  # W per turbine
-    # Doc formula gives kWh (8766/1000 * W = kWh); divide by 1000 more for MWh
+    mean_power_w = hist @ power_w  # W per device
     energy_mwh = (HOURS_PER_YEAR / 1e6 * ETA_AVAIL
-                  * (1 - loss) * TURBINES_PER_TF * mean_power_w)
+                  * (1 - loss) * DEVICES_PER_SITE * mean_power_w)
     return energy_mwh
 
 
 def compute_c_const(N):
     """
-    Annualized project-level constant cost C_const(N).
+    Annualized project-level constant cost C_const(N) for ORPC.
 
-    Includes: device manufacturing (learning curve), device installation,
-    cable installation transit, subsystem integration, constant portions
-    of contingency/compliance/insurance, and fixed OpEx.
+    Includes: device manufacturing (learning curve), tow + moor installation
+    (tug + multicat), per-device mooring materials, subsystem integration,
+    constant portions of contingency/compliance, and bundled OpEx. Cable
+    installation is fully portfolio-dependent (Mattia per-meter bundled
+    metric); ORPC's $160,422/device OpEx already bundles insurance, so
+    INSURE_FRAC is 0.
     """
     # Device manufacturing with learning curve
     units = np.arange(1, N + 1, dtype=np.float64)
     c_device_total = C_DEVICE_UNIT1 * np.sum(units ** LEARNING_EXP)
 
-    # Device installation
-    device_days = 2 * TRANSIT_DAYS + PLACEMENT_DAYS_PER_TF * N
-    c_inst_device = device_days * JACKUP_DAY_RATE
+    # Phase 1: Tow (tug)
+    tug_days = 2 * TRANSIT_DAYS + TUG_DAYS_PER_DEVICE * N
+    c_inst_tow = tug_days * TUG_DAY_RATE
 
-    # Cable installation transit only (laying is portfolio-dependent)
-    c_inst_cable_transit = 2 * TRANSIT_DAYS * CLV_DAY_RATE
+    # Phase 2: Moor (multicat)
+    multicat_days = 2 * TRANSIT_DAYS + MULTICAT_DAYS_PER_DEVICE * N
+    c_inst_moor = multicat_days * MULTICAT_DAY_RATE
+
+    # Mooring materials (chains + gravity anchors)
+    c_mooring_mat = MOORING_MAT_PER_DEVICE * N
+
+    c_inst_const = c_inst_tow + c_inst_moor + c_mooring_mat
 
     # Subsystem integration
     c_subsys = SUBSYS_FRAC * c_device_total
 
     # Contingency (constant portion)
-    c_contin_const = CONTIN_FRAC * (c_device_total + c_subsys
-                                     + c_inst_device + c_inst_cable_transit)
+    c_contin_const = CONTIN_FRAC * (c_device_total + c_subsys + c_inst_const)
 
     # Environmental compliance (constant portion)
     c_ec_const = EC_FRAC * (c_device_total + c_subsys + c_contin_const)
 
     # Total constant CapEx
-    capex_const = (c_device_total + c_inst_device + c_inst_cable_transit
-                   + c_subsys + c_contin_const + c_ec_const)
+    capex_const = (c_device_total + c_inst_const + c_subsys
+                   + c_contin_const + c_ec_const)
 
     # Annualized constant cost
     annual_capex = FCR * capex_const
     annual_opex = OPEX_FIXED_PER_TF * N
-    annual_insurance_const = INSURE_FRAC * capex_const
+    annual_insurance_const = INSURE_FRAC * capex_const  # 0 for ORPC (bundled)
 
     c_const = annual_capex + annual_opex + annual_insurance_const
     return c_const
@@ -156,10 +160,11 @@ def compute_c_const(N):
 
 def compute_c_site(cable_cost_total, laying_cost):
     """
-    Annualized portfolio-dependent cost for a single site.
+    Annualized portfolio-dependent cost for a single ORPC site.
 
-    Includes cable purchase, cable laying, and cascading percentages
-    (contingency, compliance, insurance) on the portfolio-dependent portion.
+    Includes cable purchase, cable laying, onshore DC->AC inverter,
+    and cascading percentages (contingency, compliance) applied to
+    laying only — same cascade pattern as the VP pipeline.
     """
     # Contingency on laying
     contin_pd = CONTIN_FRAC * laying_cost
@@ -168,19 +173,12 @@ def compute_c_site(cable_cost_total, laying_cost):
     ec_pd = EC_FRAC * contin_pd
 
     # Total portfolio-dependent CapEx for this site
-    capex_pd = cable_cost_total + laying_cost + contin_pd + ec_pd
+    capex_pd = (cable_cost_total + ONSHORE_INVERTER_COST + laying_cost
+                + contin_pd + ec_pd)
 
-    # Annualized: FCR * CapEx + insurance on PD CapEx
+    # Annualized: FCR * CapEx + insurance (0 for ORPC, bundled in OpEx)
     c_site = FCR * capex_pd + INSURE_FRAC * capex_pd
     return c_site
-
-
-def laying_cost_for_distance(distance_km):
-    """Cable laying cost for a single site's shore distance."""
-    laying_hours = (SURFACE_FRACTION * distance_km / SURFACE_SPEED_KMH
-                    + BURIAL_FRACTION * distance_km / BURIAL_SPEED_KMH)
-    laying_days = laying_hours / 24.0
-    return laying_days * CLV_DAY_RATE
 
 
 def solve_bqp(n, Sigma, N, c_const, c_site, E, L):
@@ -262,7 +260,7 @@ def main():
     # -----------------------------------------------------------------
     # Cable selection and losses per site
     # -----------------------------------------------------------------
-    print("\nSelecting cables (loss formula: 0.505 * R * L)...")
+    print("\nSelecting cables (DC monopolar loss: R * L)...")
     cable_csa = np.zeros(n_sites, dtype=np.int32)
     cable_cost_total = np.zeros(n_sites)
     cable_loss = np.zeros(n_sites)
@@ -280,7 +278,7 @@ def main():
           f"max: {cable_loss.max()*100:.1f}%")
 
     # -----------------------------------------------------------------
-    # Energy per site (MWh/yr per TriFrame)
+    # Energy per site (MWh/yr per device)
     # -----------------------------------------------------------------
     print("\nComputing annual energy...")
     E = np.array([compute_energy(hist[i], centers, cable_loss[i])
@@ -292,8 +290,7 @@ def main():
     # Cost per site (c_site_i, annualized $/yr)
     # -----------------------------------------------------------------
     print("\nComputing site costs...")
-    laying_costs = np.array([laying_cost_for_distance(shore_dist[i])
-                             for i in range(n_sites)])
+    laying_costs = CABLE_INST_PER_KM * shore_dist
     c_site = np.array([compute_c_site(cable_cost_total[i], laying_costs[i])
                        for i in range(n_sites)])
     print(f"  c_site range: ${c_site.min():,.0f} to ${c_site.max():,.0f} /yr")
@@ -301,9 +298,9 @@ def main():
     # -----------------------------------------------------------------
     # Optimization sweep over P_target and LCOE target
     # -----------------------------------------------------------------
-    N = int(np.ceil(P_TARGET_MW * 1000 / P_TRIFRAME_KW))
+    N = int(np.ceil(P_TARGET_MW * 1000 / P_DEVICE_KW))
     print(f"\n{'='*60}")
-    print(f"P_target = {P_TARGET_MW} MW -> N = {N} TriFrames")
+    print(f"P_target = {P_TARGET_MW} MW -> N = {N} devices")
     print(f"{'='*60}")
 
     c_const = compute_c_const(N)
@@ -457,11 +454,11 @@ def main():
             "site": np.arange(n_sites),
         },
         attrs={
-            "title": "Tidal portfolio optimization results",
+            "title": "ORPC TidGen 2.0 portfolio optimization results",
             "P_target_MW": P_TARGET_MW,
-            "N_triframes": N,
+            "N_devices": N,
             "C_const": c_const,
-            "loss_formula": "0.505 * R * L",
+            "loss_formula": "R * L  (DC monopolar, I=500 A, P=500 kW)",
             "solver": "Gurobi via gurobipy",
             "created": datetime.now(timezone.utc).isoformat(),
         },
