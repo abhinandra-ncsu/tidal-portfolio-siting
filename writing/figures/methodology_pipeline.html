@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Methodology pipeline</title>
+<style>
+  body { margin: 0; padding: 24px; font-family: "Inter", "Helvetica Neue", Arial, sans-serif; background: #f8fafc; color: #0f172a; }
+  .frame { max-width: 1260px; margin: 0 auto; background: white; padding: 24px 28px 32px; border: 1px solid #e2e8f0; border-radius: 8px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { font-size: 13px; color: #475569; margin: 0 0 18px; }
+  svg { display: block; width: 100%; height: auto; }
+  text { font-family: "Inter", "Helvetica Neue", Arial, sans-serif; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <h1>Tidal portfolio-siting model — methodology pipeline</h1>
+  <p class="sub">Three modules — energy, cost, optimization — map inputs to a deployment portfolio.</p>
+
+  <svg viewBox="0 0 1240 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Methodology pipeline diagram">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#334155"></path>
+      </marker>
+      <marker id="arrow-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"></path>
+      </marker>
+      <marker id="arrow-loop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#15803d"></path>
+      </marker>
+    </defs>
+
+    <!-- ========== COLUMN HEADERS ========== -->
+    <g font-size="11" font-weight="700" letter-spacing="2">
+      <rect x="20" y="20" width="200" height="32" rx="6" fill="#0f172a"></rect>
+      <text x="120" y="40" text-anchor="middle" fill="white">INPUTS</text>
+
+      <rect x="250" y="20" width="720" height="32" rx="6" fill="#0f172a"></rect>
+      <text x="610" y="40" text-anchor="middle" fill="white">METHODOLOGY</text>
+
+      <rect x="1000" y="20" width="220" height="32" rx="6" fill="#0f172a"></rect>
+      <text x="1110" y="40" text-anchor="middle" fill="white">OUTPUTS</text>
+    </g>
+
+    <!-- ========== INPUTS COLUMN ========== -->
+
+    <!-- Tidal harmonic data -->
+    <g>
+      <rect x="20" y="72" width="200" height="146" rx="8" fill="#f8fafc" stroke="#94a3b8"></rect>
+      <text x="34" y="92" font-size="12" font-weight="700" fill="#0f172a">Tidal harmonic data</text>
+      <text x="34" y="114" font-size="11.5" fill="#334155">ROMS dataset:</text>
+      <text x="34" y="132" font-size="11" fill="#475569">• 10 harmonic constituents:</text>
+      <text x="46" y="154" font-size="11" fill="#475569">Q1, O1, P1, K1, N2,</text>
+      <text x="46" y="172" font-size="11" fill="#475569">M2, S2, K2, M4, M6</text>
+      <text x="34" y="196" font-size="11" fill="#475569">• water depth (per site)</text>
+    </g>
+
+    <!-- Geographic data -->
+    <g>
+      <rect x="20" y="228" width="200" height="64" rx="8" fill="#f8fafc" stroke="#94a3b8"></rect>
+      <text x="34" y="248" font-size="12" font-weight="700" fill="#0f172a">Geographic data</text>
+      <text x="34" y="268" font-size="11" fill="#475569">• NOAA medium resolution coastline</text>
+      <text x="34" y="284" font-size="11" fill="#475569">• state boundary boxes</text>
+    </g>
+
+    <!-- Device specification -->
+    <g transform="translate(0, 74)">
+      <rect x="20" y="228" width="200" height="324" rx="8" fill="#fefce8" stroke="#a16207" stroke-width="1.4"></rect>
+      <text x="34" y="248" font-size="12" font-weight="700" fill="#854d0e">Device specification</text>
+
+      <line x1="34" y1="262" x2="206" y2="262" stroke="#fde68a"></line>
+
+      <text x="34" y="280" font-size="11.5" font-weight="600" fill="#0f172a">Energy characteristics</text>
+      <text x="34" y="296" font-size="11" fill="#334155">• power curve P(v)</text>
+      <text x="34" y="310" font-size="11" fill="#334155">• rated power per device</text>
+      <text x="34" y="324" font-size="11" fill="#334155">• operating depth range</text>
+      <text x="34" y="338" font-size="11" fill="#334155">• availability η<tspan font-size="8" baseline-shift="sub">avail</tspan></text>
+
+      <line x1="34" y1="366" x2="206" y2="366" stroke="#fde68a"></line>
+
+      <text x="34" y="384" font-size="11.5" font-weight="600" fill="#0f172a">Cost characteristics</text>
+      <text x="34" y="400" font-size="11" fill="#334155">CapEx: device, electrical,</text>
+      <text x="34" y="414" font-size="11" fill="#334155">installation, subsystem integration,</text>
+      <text x="34" y="428" font-size="11" fill="#334155">contingency, environmental compliance</text>
+      <text x="34" y="446" font-size="11" fill="#334155">OpEx: replacement, repair, insurance</text>
+      <text x="34" y="460" font-size="11" fill="#334155">Fixed charge rate (FCR)</text>
+
+      <line x1="34" y1="474" x2="206" y2="474" stroke="#fde68a"></line>
+
+      <text x="34" y="492" font-size="11.5" font-weight="600" fill="#0f172a">Devices in this study</text>
+      <text x="34" y="508" font-size="11" fill="#334155">• VP Gen5 KHPS — 105 kW</text>
+      <text x="34" y="524" font-size="11" fill="#334155">• ORPC TidGen 2.0 — 500 kW</text>
+    </g>
+
+    <!-- ========== METHODOLOGY OUTER FRAME ========== -->
+    <rect x="250" y="72" width="720" height="600" rx="10" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="2 4"></rect>
+
+    <!-- ========== ENERGY MODULE (top-left) ========== -->
+    <g>
+      <rect x="262" y="86" width="328" height="280" rx="8" fill="#eff6ff" stroke="#1e40af" stroke-width="1.2"></rect>
+      <text x="278" y="108" font-size="10.5" font-weight="700" fill="#1e40af" letter-spacing="1.4">ENERGY MODEL</text>
+      <text x="278" y="128" font-size="12.5" font-weight="600" fill="#0f172a">Per-site current → power → annual energy</text>
+      <text x="278" y="146" font-size="11" fill="#334155">Reconstruct hourly current per site from harmonic</text>
+      <text x="278" y="162" font-size="11" fill="#334155">constants; apply device power curve and annualize.</text>
+
+      <!-- Combined inset: process flow + per-site outputs -->
+      <rect x="278" y="176" width="296" height="146" rx="5" fill="white" stroke="#bfdbfe"></rect>
+
+      <!-- Process flow -->
+      <text x="290" y="194" font-size="9.5" font-weight="700" fill="#1e40af" letter-spacing="0.8">PROCESS FLOW</text>
+      <text x="290" y="216" font-size="12" fill="#0f172a" font-family="Georgia, serif">harmonics → v<tspan font-size="8" baseline-shift="sub">i</tspan>(t) → p<tspan font-size="8" baseline-shift="sub">i</tspan>(v) → (CF<tspan font-size="8" baseline-shift="sub">i</tspan>, E<tspan font-size="8" baseline-shift="sub">i</tspan>)</text>
+
+      <!-- Divider -->
+      <line x1="290" y1="232" x2="562" y2="232" stroke="#dbeafe"></line>
+
+      <!-- Per-site outputs -->
+      <text x="290" y="248" font-size="9.5" font-weight="700" fill="#1e40af" letter-spacing="0.8">PER-SITE OUTPUTS<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">(E in MWh/yr)</tspan></text>
+      <text x="290" y="268" font-size="12" fill="#0f172a" font-family="Georgia, serif">P<tspan font-size="8" baseline-shift="sub">i</tspan> = Σ<tspan font-size="8" baseline-shift="sub">k</tspan> P(v<tspan font-size="8" baseline-shift="sub">k</tspan>) p<tspan font-size="8" baseline-shift="sub">i</tspan>(v<tspan font-size="8" baseline-shift="sub">k</tspan>)</text>
+      <text x="290" y="290" font-size="12" fill="#0f172a" font-family="Georgia, serif">CF<tspan font-size="8" baseline-shift="sub">i</tspan> = P<tspan font-size="8" baseline-shift="sub">i</tspan> / P<tspan font-size="8" baseline-shift="sub">rated</tspan></text>
+      <text x="290" y="312" font-size="12" fill="#0f172a" font-family="Georgia, serif">E<tspan font-size="8" baseline-shift="sub">i</tspan> = 8766 · η<tspan font-size="8" baseline-shift="sub">avail</tspan> · (1−L<tspan font-size="8" baseline-shift="sub">i</tspan>) · n<tspan font-size="8" baseline-shift="sub">t</tspan> · P<tspan font-size="8" baseline-shift="sub">i</tspan> / 1000</text>
+
+      <!-- Screen line -->
+      <text x="278" y="338" font-size="11" font-style="italic" fill="#1e40af">screen: keep sites with CF<tspan font-size="8" baseline-shift="sub">i</tspan> ≥ 0.05, depth ∈ device window</text>
+
+      <!-- Output -->
+      <text x="278" y="360" font-size="11" font-weight="600" fill="#1e40af">Output:</text>
+      <text x="320" y="360" font-size="11" fill="#0f172a">(CF<tspan font-size="9" baseline-shift="sub">i</tspan>, E<tspan font-size="9" baseline-shift="sub">i</tspan>, v<tspan font-size="9" baseline-shift="sub">i</tspan>(t)) per site</text>
+    </g>
+
+    <!-- ========== COST MODULE (bottom-left) ========== -->
+    <g>
+      <rect x="262" y="378" width="328" height="280" rx="8" fill="#fff7ed" stroke="#c2410c" stroke-width="1.2"></rect>
+      <text x="278" y="400" font-size="10.5" font-weight="700" fill="#c2410c" letter-spacing="1.4">COST MODEL</text>
+      <text x="278" y="420" font-size="12.5" font-weight="600" fill="#0f172a">Annualized cost = project-level + site-level</text>
+      <text x="278" y="438" font-size="11" fill="#334155">Cost decomposes into project-level (depends on N) and</text>
+      <text x="278" y="452" font-size="11" fill="#334155">site-level (depends on shore distance d<tspan font-size="8" baseline-shift="sub">i</tspan> per site).</text>
+
+      <!-- Combined inset: cost decomposition + annualized portfolio cost -->
+      <rect x="278" y="466" width="296" height="168" rx="5" fill="white" stroke="#fed7aa"></rect>
+
+      <!-- Project-level subsection -->
+      <text x="290" y="482" font-size="9.5" font-weight="700" fill="#c2410c" letter-spacing="0.8">PROJECT-LEVEL<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">C<tspan font-size="7" baseline-shift="sub">const</tspan>(N) — depends on number of devices</tspan></text>
+      <text x="290" y="498" font-size="11" fill="#0f172a">device manufacturing, installation,</text>
+      <text x="290" y="512" font-size="11" fill="#0f172a">subsystem integration, contingency,</text>
+      <text x="290" y="526" font-size="11" fill="#0f172a">environmental compliance, fixed OpEx</text>
+
+      <!-- Site-level subsection -->
+      <text x="290" y="544" font-size="9.5" font-weight="700" fill="#c2410c" letter-spacing="0.8">SITE-LEVEL<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">c<tspan font-size="7" baseline-shift="sub">site,i</tspan> — scales with shore distance d<tspan font-size="7" baseline-shift="sub">i</tspan></tspan></text>
+      <text x="290" y="560" font-size="11" fill="#0f172a">electrical infrastructure (cable + components),</text>
+      <text x="290" y="574" font-size="11" fill="#0f172a">cable installation (sized by d<tspan font-size="8" baseline-shift="sub">i</tspan>)</text>
+
+      <!-- Divider -->
+      <line x1="290" y1="588" x2="562" y2="588" stroke="#fed7aa"></line>
+
+      <!-- Annualized cost section -->
+      <text x="290" y="604" font-size="9.5" font-weight="700" fill="#c2410c" letter-spacing="0.8">ANNUALIZED PORTFOLIO COST<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">[$/yr]</tspan></text>
+      <text x="290" y="624" font-size="12" fill="#0f172a" font-family="Georgia, serif">C<tspan font-size="8" baseline-shift="sub">annual</tspan> = C<tspan font-size="8" baseline-shift="sub">const</tspan>(N) + Σ<tspan font-size="8" baseline-shift="sub">i</tspan> x<tspan font-size="8" baseline-shift="sub">i</tspan> · c<tspan font-size="8" baseline-shift="sub">site,i</tspan></text>
+
+      <!-- Output -->
+      <text x="278" y="650" font-size="11" font-weight="600" fill="#c2410c">Output:</text>
+      <text x="320" y="650" font-size="11" fill="#0f172a">C<tspan font-size="9" baseline-shift="sub">const</tspan>(N) and {c<tspan font-size="9" baseline-shift="sub">site,i</tspan>} per site</text>
+    </g>
+
+    <!-- ========== PORTFOLIO OPTIMIZATION (right, full-height) ========== -->
+    <g>
+      <rect x="606" y="86" width="352" height="572" rx="8" fill="#ecfdf5" stroke="#15803d" stroke-width="1.2"></rect>
+      <text x="622" y="108" font-size="10.5" font-weight="700" fill="#15803d" letter-spacing="1.4">PORTFOLIO OPTIMIZATION</text>
+      <text x="622" y="128" font-size="12.5" font-weight="600" fill="#0f172a">Variance-minimizing site selection</text>
+      <text x="622" y="146" font-size="11" fill="#334155">Pick N sites to minimize joint output variance under an</text>
+      <text x="622" y="162" font-size="11" fill="#334155">LCOE ceiling.</text>
+
+      <!-- Combined inset: covariance + BQP -->
+      <rect x="622" y="192" width="320" height="242" rx="5" fill="white" stroke="#bbf7d0"></rect>
+
+      <!-- Covariance section -->
+      <text x="634" y="210" font-size="9.5" font-weight="700" fill="#15803d" letter-spacing="0.8">COVARIANCE MATRIX<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">cross-site, from time series</tspan></text>
+      <text x="634" y="232" font-size="12.5" fill="#0f172a" font-family="Georgia, serif">Σ<tspan font-size="8" baseline-shift="sub">ij</tspan> = Cov( P<tspan font-size="8" baseline-shift="sub">i</tspan>(t), P<tspan font-size="8" baseline-shift="sub">j</tspan>(t) ),     P<tspan font-size="8" baseline-shift="sub">i</tspan>(t) = P( v<tspan font-size="8" baseline-shift="sub">i</tspan>(t) )</text>
+      <text x="634" y="250" font-size="10" font-style="italic" fill="#64748b">v<tspan font-size="8" baseline-shift="sub">i</tspan>(t) from the Energy module</text>
+
+      <!-- Divider -->
+      <line x1="634" y1="266" x2="930" y2="266" stroke="#bbf7d0"></line>
+
+      <!-- BQP section -->
+      <text x="634" y="282" font-size="9.5" font-weight="700" fill="#15803d" letter-spacing="0.8">BINARY QUADRATIC PROGRAM</text>
+      <text x="634" y="306" font-size="13" fill="#0f172a" font-family="Georgia, serif">min<tspan dx="14">x' Σ x</tspan></text>
+      <text x="634" y="330" font-size="13" fill="#0f172a" font-family="Georgia, serif">s.t.<tspan dx="14">Σ<tspan font-size="8" baseline-shift="sub">i</tspan> x<tspan font-size="8" baseline-shift="sub">i</tspan> = N</tspan></text>
+      <text x="684" y="352" font-size="13" fill="#0f172a" font-family="Georgia, serif">C<tspan font-size="8" baseline-shift="sub">const</tspan>(N) + Σ<tspan font-size="8" baseline-shift="sub">i</tspan> x<tspan font-size="8" baseline-shift="sub">i</tspan> ( c<tspan font-size="8" baseline-shift="sub">site,i</tspan> − L · E<tspan font-size="8" baseline-shift="sub">i</tspan> ) ≤ 0</text>
+      <text x="684" y="374" font-size="13" fill="#0f172a" font-family="Georgia, serif">x<tspan font-size="8" baseline-shift="sub">i</tspan> ∈ {0, 1}<tspan font-family="Inter,sans-serif" font-size="10" font-style="italic" fill="#64748b" dx="14">for each candidate site i</tspan></text>
+      <text x="634" y="400" font-size="10" font-style="italic" fill="#15803d">solved with Gurobi (mixed-integer quadratic)</text>
+      <text x="634" y="418" font-size="10" font-style="italic" fill="#15803d">↻ swept over L ∈ {L₁, …, L_K} to trace efficient frontier</text>
+
+      <!-- Output -->
+      <text x="622" y="458" font-size="11" font-weight="600" fill="#15803d">Output:</text>
+      <text x="664" y="458" font-size="11" fill="#0f172a">x*(L) per L; envelope = efficient frontier</text>
+    </g>
+
+    <!-- ========== INPUTS → METHODOLOGY ARROWS (drawn after modules so labels render on top) ========== -->
+    <!-- tidal → Energy module -->
+    <path d="M 220 145 H 262" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
+
+    <!-- geographic → Energy module -->
+    <path d="M 220 260 H 262" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
+
+    <!-- device (energy chars) → Energy module (curves up: device card sits below Energy module) -->
+    <path d="M 220 404 C 244 404, 244 340, 262 340" stroke="#a16207" stroke-width="1.4" fill="none" marker-end="url(#arrow-soft)" stroke-dasharray="4 3"></path>
+    <text x="226" y="396" font-size="10" fill="#854d0e" font-family="Georgia, serif">P(v), η</text>
+
+    <!-- device (cost chars) → Cost module -->
+    <path d="M 220 504 H 262" stroke="#a16207" stroke-width="1.4" fill="none" marker-end="url(#arrow-soft)" stroke-dasharray="4 3"></path>
+    <rect x="222" y="486" width="78" height="14" rx="2" fill="white"></rect>
+    <text x="226" y="496" font-size="10" fill="#854d0e" font-family="Georgia, serif">CapEx, OpEx, FCR</text>
+
+    <!-- ========== INTERNAL ARROWS WITHIN METHODOLOGY ========== -->
+    <!-- Energy → Portfolio Optimization -->
+    <path d="M 590 220 H 606" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
+    <rect x="578" y="204" width="42" height="14" rx="2" fill="white"></rect>
+    <text x="598" y="214" font-size="10" text-anchor="middle" fill="#475569" font-family="Georgia, serif">E<tspan font-size="8" baseline-shift="sub">i</tspan>, v<tspan font-size="8" baseline-shift="sub">i</tspan>(t)</text>
+
+    <!-- Cost → Portfolio Optimization -->
+    <path d="M 590 518 H 606" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
+    <rect x="552" y="502" width="92" height="14" rx="2" fill="white"></rect>
+    <text x="598" y="512" font-size="10" text-anchor="middle" fill="#475569" font-family="Georgia, serif">c<tspan font-size="8" baseline-shift="sub">site,i</tspan>, C<tspan font-size="8" baseline-shift="sub">const</tspan>(N)</text>
+
+    <!-- ========== METHODOLOGY → OUTPUTS ARROWS ========== -->
+    <!-- single trunk from portfolio right edge → outputs cards -->
+    <path d="M 958 372 H 985" stroke="#334155" stroke-width="1.6" fill="none"></path>
+    <path d="M 985 132 V 612" stroke="#334155" stroke-width="1.6" fill="none"></path>
+    <path d="M 985 132 H 1000" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
+    <path d="M 985 372 H 1000" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
+    <path d="M 985 612 H 1000" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
+
+    <!-- ========== OUTPUTS COLUMN ========== -->
+    <!-- Output 1: selected portfolio -->
+    <g>
+      <rect x="1000" y="72" width="220" height="120" rx="8" fill="#f0fdf4" stroke="#15803d"></rect>
+      <text x="1014" y="92" font-size="12" font-weight="700" fill="#166534">Selected portfolio</text>
+      <text x="1014" y="110" font-size="11.5" fill="#0f172a">x* — which candidate sites</text>
+      <text x="1014" y="125" font-size="11.5" fill="#0f172a">are deployed</text>
+      <text x="1014" y="148" font-size="11" fill="#475569" font-style="italic">map of selected coastal</text>
+      <text x="1014" y="162" font-size="11" fill="#475569" font-style="italic">locations</text>
+    </g>
+
+    <!-- Output 2: efficient frontier -->
+    <g>
+      <rect x="1000" y="312" width="220" height="120" rx="8" fill="#f0fdf4" stroke="#15803d"></rect>
+      <text x="1014" y="332" font-size="12" font-weight="700" fill="#166534">Efficient frontier</text>
+      <text x="1014" y="350" font-size="11.5" fill="#0f172a">portfolio variance vs LCOE</text>
+      <text x="1014" y="365" font-size="11.5" fill="#0f172a">cap, swept across L</text>
+      <text x="1014" y="388" font-size="11" fill="#475569" font-style="italic">one solution per L;</text>
+      <text x="1014" y="402" font-size="11" fill="#475569" font-style="italic">envelope = frontier</text>
+    </g>
+
+    <!-- Output 3: cost + energy breakdown -->
+    <g>
+      <rect x="1000" y="552" width="220" height="120" rx="8" fill="#f0fdf4" stroke="#15803d"></rect>
+      <text x="1014" y="572" font-size="12" font-weight="700" fill="#166534">Cost &amp; energy breakdown</text>
+      <text x="1014" y="590" font-size="11.5" fill="#0f172a">portfolio LCOE, total AEP,</text>
+      <text x="1014" y="605" font-size="11.5" fill="#0f172a">CapEx / OpEx composition</text>
+      <text x="1014" y="628" font-size="11" fill="#475569" font-style="italic">attribution per device</text>
+      <text x="1014" y="642" font-size="11" fill="#475569" font-style="italic">and cost component</text>
+    </g>
+
+  </svg>
+</div>
+
+</body></html>
