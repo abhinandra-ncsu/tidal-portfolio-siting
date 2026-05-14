@@ -155,8 +155,7 @@ def main():
     # Shore distances
     print("Computing shore distances...")
     distances = compute_shore_distances(cand_lat, cand_lon, SHORELINE_PATH)
-    print(f"  Median: {np.median(distances):.2f} km, "
-          f"Max: {distances.max():.2f} km")
+    print(f"  Distance range: {distances.min():.2f} to {distances.max():.2f} km")
 
     # Save
     print("Saving...")
