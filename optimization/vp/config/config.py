@@ -52,16 +52,23 @@ if VARIANT not in VARIANTS:
 _v = VARIANTS[VARIANT]
 
 
+def _mw_label(mw):
+    """Path segment for a MW target. 5.0 -> '5mw'; 5.25 -> '5_25mw'."""
+    if float(mw).is_integer():
+        return f"{int(mw)}mw"
+    return f"{mw}".replace(".", "_") + "mw"
+
+
 def get_results_dir():
     """Return the results directory for the current run.
 
     Resolution order:
       1. TIDAL_RESULTS_DIR env var (absolute path), if set.
-      2. <repo>/results/vp/turbine_modification/<variant>/{groups,states}/<scope>/
-         when TIDAL_VARIANT is explicitly set.
-      3. <repo>/results/vp/groups/<TIDAL_GROUP>/ if TIDAL_GROUP is set.
-      4. <repo>/results/vp/states/<single_state>/ if exactly one state is selected.
-      5. <repo>/results/vp/groups/pooled/ otherwise.
+      2. results/vp/turbine_modification/<variant>/{groups,states}/<scope>/<MW>mw/
+         when TIDAL_VARIANT is explicitly set (MW segment makes scale runs distinct).
+      3. results/vp/groups/<TIDAL_GROUP>/ if TIDAL_GROUP is set.
+      4. results/vp/states/<single_state>/ if exactly one state is selected.
+      5. results/vp/groups/pooled/ otherwise.
     """
     override = os.environ.get("TIDAL_RESULTS_DIR")
     if override:
@@ -70,10 +77,14 @@ def get_results_dir():
     if _variant_env:
         base = os.path.join(base, "turbine_modification", VARIANT)
     if GROUP:
-        return os.path.join(base, "groups", GROUP)
-    if STATES and len(STATES) == 1:
-        return os.path.join(base, "states", STATES[0])
-    return os.path.join(base, "groups", "pooled")
+        scope_dir = os.path.join(base, "groups", GROUP)
+    elif STATES and len(STATES) == 1:
+        scope_dir = os.path.join(base, "states", STATES[0])
+    else:
+        scope_dir = os.path.join(base, "groups", "pooled")
+    if _variant_env:
+        scope_dir = os.path.join(scope_dir, _mw_label(P_TARGET_MW))
+    return scope_dir
 
 # =========================================================================
 # VP turbine — values resolved from VARIANTS[VARIANT] (see EXPERIMENT.md)
