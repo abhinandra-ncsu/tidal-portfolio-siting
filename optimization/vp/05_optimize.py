@@ -63,9 +63,14 @@ CANDIDATES_PATH = os.path.join(RESULTS_DIR, "candidates.nc")
 COVARIANCE_PATH = os.path.join(RESULTS_DIR, "covariance.nc")
 RESULTS_PATH = os.path.join(RESULTS_DIR, "optimization_results.nc")
 
-# Loss formula: 3 * I^2 * R * L / P = 0.505 * R * L
-# I = 133 A (from P=105kW, V=480V, PF=0.95)
-LOSS_COEFF = 0.505
+# Loss formula: 3 * I^2 * R * L / P, with I = P_TF / (sqrt(3) * V * PF).
+# V = 480 V and PF = 0.95 held constant across the variant family
+# (see EXPERIMENT.md §Electrical infrastructure).
+# gen5 (P_TF=105 kW) reproduces 0.505; smaller variants scale linearly with P_TF.
+_V_GEN_VOLTS = 480.0
+_PF = 0.95
+_I_AMPS = (P_TRIFRAME_KW * 1000.0) / (np.sqrt(3.0) * _V_GEN_VOLTS * _PF)
+LOSS_COEFF = 3.0 * _I_AMPS**2 / (P_TRIFRAME_KW * 1000.0)
 
 
 # =========================================================================

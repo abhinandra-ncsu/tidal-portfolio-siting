@@ -31,37 +31,65 @@ _VP_DIR = os.path.dirname(_CONFIG_DIR)
 _OPT_DIR = os.path.dirname(_VP_DIR)
 _ROOT_DIR = os.path.dirname(_OPT_DIR)
 
+# =========================================================================
+# Turbine variant family — experiments/turbine_modification/EXPERIMENT.md
+# =========================================================================
+# gen5 row holds the canonical pre-experiment Verdant Gen5 values
+# (v_rated=2.11, v_cut_in=0.63, P=35 kW). Commit 2 of the variant rollout
+# will move gen5 to the EXPERIMENT.md values (2.03, 0.61, 31.2).
+VARIANTS = {
+    "gen5":   {"D": 5.0, "area": 19.63, "v_rated": 2.11, "v_cut_in": 0.63,
+               "p_turbine_kw": 35.0, "c_device": 1_402_500.0, "min_depth_m": 10.0},
+    "modvp4": {"D": 4.0, "area": 12.57, "v_rated": 2.33, "v_cut_in": 0.70,
+               "p_turbine_kw": 30.1, "c_device":   967_000.0, "min_depth_m":  8.0},
+    "modvp3": {"D": 3.0, "area":  7.07, "v_rated": 2.32, "v_cut_in": 0.70,
+               "p_turbine_kw": 16.8, "c_device":   640_500.0, "min_depth_m":  6.0},
+    "modvp2": {"D": 2.0, "area":  3.14, "v_rated": 2.22, "v_cut_in": 0.67,
+               "p_turbine_kw":  6.5, "c_device":   417_000.0, "min_depth_m":  4.0},
+}
+
+_variant_env = os.environ.get("TIDAL_VARIANT", "").strip().lower()
+VARIANT = _variant_env or "gen5"
+if VARIANT not in VARIANTS:
+    raise ValueError(f"Unknown TIDAL_VARIANT={VARIANT!r}; expected one of {list(VARIANTS)}")
+_v = VARIANTS[VARIANT]
+
 
 def get_results_dir():
     """Return the results directory for the current run.
 
     Resolution order:
       1. TIDAL_RESULTS_DIR env var (absolute path), if set.
-      2. <repo>/results/vp/groups/<TIDAL_GROUP>/ if TIDAL_GROUP is set.
-      3. <repo>/results/vp/states/<single_state>/ if exactly one state is selected.
-      4. <repo>/results/vp/groups/pooled/ otherwise.
+      2. <repo>/results/vp/turbine_modification/<variant>/{groups,states}/<scope>/
+         when TIDAL_VARIANT is explicitly set.
+      3. <repo>/results/vp/groups/<TIDAL_GROUP>/ if TIDAL_GROUP is set.
+      4. <repo>/results/vp/states/<single_state>/ if exactly one state is selected.
+      5. <repo>/results/vp/groups/pooled/ otherwise.
     """
     override = os.environ.get("TIDAL_RESULTS_DIR")
     if override:
         return override
+    base = os.path.join(_ROOT_DIR, "results", "vp")
+    if _variant_env:
+        base = os.path.join(base, "turbine_modification", VARIANT)
     if GROUP:
-        return os.path.join(_ROOT_DIR, "results", "vp", "groups", GROUP)
+        return os.path.join(base, "groups", GROUP)
     if STATES and len(STATES) == 1:
-        return os.path.join(_ROOT_DIR, "results", "vp", "states", STATES[0])
-    return os.path.join(_ROOT_DIR, "results", "vp", "groups", "pooled")
+        return os.path.join(base, "states", STATES[0])
+    return os.path.join(base, "groups", "pooled")
 
 # =========================================================================
-# VP Gen5 turbine (Lewis et al. 2021, turbine_design_specification.md)
+# VP turbine — values resolved from VARIANTS[VARIANT] (see EXPERIMENT.md)
 # =========================================================================
-RHO = 1025.0            # seawater density (kg/m^3)
-AREA = 19.63             # swept area (m^2), D = 5 m
-CP = 0.37                # power coefficient (system Cp, net of drivetrain)
-V_CUT_IN = 0.63          # cut-in speed (m/s), 0.3 * V_rated
-V_RATED = 2.11           # rated speed (m/s)
-P_TURBINE_KW = 35.0      # rated power per turbine (kW)
-P_RATED_W = P_TURBINE_KW * 1000  # rated power per turbine (W)
+RHO = 1025.0                       # seawater density (kg/m^3)
+CP = 0.37                          # power coefficient (Lewis et al. 2021, held across family)
+AREA = _v["area"]                  # swept area (m^2)
+V_CUT_IN = _v["v_cut_in"]          # cut-in speed (m/s)
+V_RATED = _v["v_rated"]            # rated speed (m/s)
+P_TURBINE_KW = _v["p_turbine_kw"]  # rated power per turbine (kW)
+P_RATED_W = P_TURBINE_KW * 1000    # rated power per turbine (W)
 TURBINES_PER_TF = 3
-P_TRIFRAME_KW = P_TURBINE_KW * TURBINES_PER_TF  # 105 kW
+P_TRIFRAME_KW = P_TURBINE_KW * TURBINES_PER_TF
 
 # =========================================================================
 # Energy parameters (energy/methodology.md)
@@ -91,7 +119,7 @@ CABLES = [
 # =========================================================================
 # Cost parameters — Device (../methodology/cost/capex/capex_cost_components.md)
 # =========================================================================
-C_DEVICE_UNIT1 = 1_402_500.0              # $ per TriFrame (unit 1)
+C_DEVICE_UNIT1 = _v["c_device"]            # $ per TriFrame (unit 1), variant-dependent
 LEARNING_RATE = 0.12                       # 12% (Hassan 2024)
 LEARNING_EXP = np.log(1 - LEARNING_RATE) / np.log(2)  # b = -0.1699
 
@@ -130,7 +158,7 @@ FCR = 0.113              # Fixed Charge Rate (11.3%)
 # =========================================================================
 # Filtering thresholds
 # =========================================================================
-MIN_DEPTH_M = float(os.environ.get("TIDAL_MIN_DEPTH_M", 10.0))  # min water depth (m); TIDAL_MIN_DEPTH_M env var overrides
+MIN_DEPTH_M = float(os.environ.get("TIDAL_MIN_DEPTH_M", _v["min_depth_m"]))  # min water depth (m); variant default, TIDAL_MIN_DEPTH_M env var overrides
 CF_THRESHOLD = 0.05      # capacity factor screening threshold
 BBOX_BUFFER_DEG = 0.15   # buffer added to state bounding boxes (degrees)
 

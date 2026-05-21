@@ -26,7 +26,8 @@ MATLAB_BIN="${MATLAB_BIN:-/Applications/MATLAB_R2024b.app/bin/matlab}"
 export TIDAL_GROUP="$GROUP"
 export TIDAL_STATE="$STATES"
 
-RESULTS_DIR="$REPO_DIR/results/vp/groups/$GROUP"
+# Defer path resolution to config.py so TIDAL_VARIANT et al. take effect.
+RESULTS_DIR="$("$VENV_PY" -c "import sys; sys.path.insert(0, '$SCRIPT_DIR'); from config.config import get_results_dir; print(get_results_dir())")"
 mkdir -p "$RESULTS_DIR"
 export TIDAL_RESULTS_DIR="$RESULTS_DIR"
 
