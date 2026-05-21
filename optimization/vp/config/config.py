@@ -34,12 +34,9 @@ _ROOT_DIR = os.path.dirname(_OPT_DIR)
 # =========================================================================
 # Turbine variant family — experiments/turbine_modification/EXPERIMENT.md
 # =========================================================================
-# gen5 row holds the canonical pre-experiment Verdant Gen5 values
-# (v_rated=2.11, v_cut_in=0.63, P=35 kW). Commit 2 of the variant rollout
-# will move gen5 to the EXPERIMENT.md values (2.03, 0.61, 31.2).
 VARIANTS = {
-    "gen5":   {"D": 5.0, "area": 19.63, "v_rated": 2.11, "v_cut_in": 0.63,
-               "p_turbine_kw": 35.0, "c_device": 1_402_500.0, "min_depth_m": 10.0},
+    "gen5":   {"D": 5.0, "area": 19.63, "v_rated": 2.03, "v_cut_in": 0.61,
+               "p_turbine_kw": 31.2, "c_device": 1_402_500.0, "min_depth_m": 10.0},
     "modvp4": {"D": 4.0, "area": 12.57, "v_rated": 2.33, "v_cut_in": 0.70,
                "p_turbine_kw": 30.1, "c_device":   967_000.0, "min_depth_m":  8.0},
     "modvp3": {"D": 3.0, "area":  7.07, "v_rated": 2.32, "v_cut_in": 0.70,

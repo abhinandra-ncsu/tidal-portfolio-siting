@@ -7,8 +7,6 @@ function cfg = config()
 % Sources documented inline; see docs/ for full derivations.
 
     % VP turbine — variant family (experiments/turbine_modification/EXPERIMENT.md)
-    % gen5 row holds pre-experiment values (v_rated=2.11, v_cut_in=0.63, P=35 kW).
-    % Commit 2 of the rollout moves gen5 to EXPERIMENT.md values (2.03, 0.61, 31.2).
     variant = getenv('TIDAL_VARIANT');
     if isempty(variant); variant = 'gen5'; end
     cfg.VARIANT = lower(variant);
@@ -18,7 +16,7 @@ function cfg = config()
 
     switch cfg.VARIANT
         case 'gen5'
-            cfg.AREA = 19.63; cfg.V_CUT_IN = 0.63; cfg.V_RATED = 2.11; cfg.P_RATED = 35000.0;
+            cfg.AREA = 19.63; cfg.V_CUT_IN = 0.61; cfg.V_RATED = 2.03; cfg.P_RATED = 31200.0;
         case 'modvp4'
             cfg.AREA = 12.57; cfg.V_CUT_IN = 0.70; cfg.V_RATED = 2.33; cfg.P_RATED = 30100.0;
         case 'modvp3'
