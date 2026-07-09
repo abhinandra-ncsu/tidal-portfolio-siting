@@ -20,16 +20,15 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 VENV_PY="$REPO_DIR/.venv/bin/python"
-MATLAB_BIN="${MATLAB_BIN:-/Applications/MATLAB_R2024b.app/bin/matlab}"
 
 if [[ "$STATE_ARG" == "pooled" ]]; then
     export TIDAL_STATE=""
-    RESULTS_DIR="$REPO_DIR/results/orpc/groups/pooled"
 else
     export TIDAL_STATE="$STATE_ARG"
-    RESULTS_DIR="$REPO_DIR/results/orpc/states/$STATE_ARG"
 fi
 
+# Defer path resolution to config.py so TIDAL_RESULTS_DIR override works.
+RESULTS_DIR="$("$VENV_PY" -c "import sys; sys.path.insert(0, '$SCRIPT_DIR'); from config.config import get_results_dir; print(get_results_dir())")"
 mkdir -p "$RESULTS_DIR"
 export TIDAL_RESULTS_DIR="$RESULTS_DIR"
 
@@ -51,16 +50,16 @@ echo ">>> Step 1: extract harmonics"
 "$VENV_PY" 01_extract_harmonics.py
 
 echo ""
-echo ">>> Step 2: build histograms (MATLAB)"
-"$MATLAB_BIN" -batch "build_histograms"
+echo ">>> Step 2: build histograms"
+"$VENV_PY" 02_build_histograms.py
 
 echo ""
 echo ">>> Step 3: screen candidates"
 "$VENV_PY" 03_screen_candidates.py
 
 echo ""
-echo ">>> Step 4: compute covariance (MATLAB)"
-"$MATLAB_BIN" -batch "compute_covariance"
+echo ">>> Step 4: compute covariance"
+"$VENV_PY" 04_compute_covariance.py
 
 echo ""
 echo ">>> Step 5: optimize"

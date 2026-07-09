@@ -92,105 +92,88 @@
     </g>
 
     <!-- ========== METHODOLOGY OUTER FRAME ========== -->
-    <rect x="250" y="72" width="720" height="600" rx="10" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="2 4"></rect>
+    <rect x="250" y="72" width="720" height="500" rx="10" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="2 4"></rect>
 
     <!-- ========== ENERGY MODULE (top-left) ========== -->
     <g>
-      <rect x="262" y="86" width="328" height="280" rx="8" fill="#eff6ff" stroke="#1e40af" stroke-width="1.2"></rect>
+      <rect x="262" y="86" width="328" height="184" rx="8" fill="#eff6ff" stroke="#1e40af" stroke-width="1.2"></rect>
       <text x="278" y="108" font-size="10.5" font-weight="700" fill="#1e40af" letter-spacing="1.4">ENERGY MODEL</text>
       <text x="278" y="128" font-size="12.5" font-weight="600" fill="#0f172a">Per-site current → power → annual energy</text>
       <text x="278" y="146" font-size="11" fill="#334155">Reconstruct hourly current per site from harmonic</text>
       <text x="278" y="162" font-size="11" fill="#334155">constants; apply device power curve and annualize.</text>
 
-      <!-- Combined inset: process flow + per-site outputs -->
-      <rect x="278" y="176" width="296" height="146" rx="5" fill="white" stroke="#bfdbfe"></rect>
+      <!-- Process-flow inset -->
+      <rect x="278" y="176" width="296" height="50" rx="5" fill="white" stroke="#bfdbfe"></rect>
 
       <!-- Process flow -->
       <text x="290" y="194" font-size="9.5" font-weight="700" fill="#1e40af" letter-spacing="0.8">PROCESS FLOW</text>
       <text x="290" y="216" font-size="12" fill="#0f172a" font-family="Georgia, serif">harmonics → v<tspan font-size="8" baseline-shift="sub">i</tspan>(t) → p<tspan font-size="8" baseline-shift="sub">i</tspan>(v) → (CF<tspan font-size="8" baseline-shift="sub">i</tspan>, E<tspan font-size="8" baseline-shift="sub">i</tspan>)</text>
 
-      <!-- Divider -->
-      <line x1="290" y1="232" x2="562" y2="232" stroke="#dbeafe"></line>
-
-      <!-- Per-site outputs -->
-      <text x="290" y="248" font-size="9.5" font-weight="700" fill="#1e40af" letter-spacing="0.8">PER-SITE OUTPUTS<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">(E in MWh/yr)</tspan></text>
-      <text x="290" y="268" font-size="12" fill="#0f172a" font-family="Georgia, serif">P<tspan font-size="8" baseline-shift="sub">i</tspan> = Σ<tspan font-size="8" baseline-shift="sub">k</tspan> P(v<tspan font-size="8" baseline-shift="sub">k</tspan>) p<tspan font-size="8" baseline-shift="sub">i</tspan>(v<tspan font-size="8" baseline-shift="sub">k</tspan>)</text>
-      <text x="290" y="290" font-size="12" fill="#0f172a" font-family="Georgia, serif">CF<tspan font-size="8" baseline-shift="sub">i</tspan> = P<tspan font-size="8" baseline-shift="sub">i</tspan> / P<tspan font-size="8" baseline-shift="sub">rated</tspan></text>
-      <text x="290" y="312" font-size="12" fill="#0f172a" font-family="Georgia, serif">E<tspan font-size="8" baseline-shift="sub">i</tspan> = 8766 · η<tspan font-size="8" baseline-shift="sub">avail</tspan> · (1−L<tspan font-size="8" baseline-shift="sub">i</tspan>) · n<tspan font-size="8" baseline-shift="sub">t</tspan> · P<tspan font-size="8" baseline-shift="sub">i</tspan> / 1000</text>
-
       <!-- Screen line -->
-      <text x="278" y="338" font-size="11" font-style="italic" fill="#1e40af">screen: keep sites with CF<tspan font-size="8" baseline-shift="sub">i</tspan> ≥ 0.05, depth ∈ device window</text>
+      <text x="278" y="242" font-size="11" font-style="italic" fill="#1e40af">screen: keep sites with CF<tspan font-size="8" baseline-shift="sub">i</tspan> ≥ 0.05, depth ∈ device window</text>
 
       <!-- Output -->
-      <text x="278" y="360" font-size="11" font-weight="600" fill="#1e40af">Output:</text>
-      <text x="320" y="360" font-size="11" fill="#0f172a">(CF<tspan font-size="9" baseline-shift="sub">i</tspan>, E<tspan font-size="9" baseline-shift="sub">i</tspan>, v<tspan font-size="9" baseline-shift="sub">i</tspan>(t)) per site</text>
+      <text x="278" y="264" font-size="11" font-weight="600" fill="#1e40af">Output:</text>
+      <text x="320" y="264" font-size="11" fill="#0f172a">(CF<tspan font-size="9" baseline-shift="sub">i</tspan>, E<tspan font-size="9" baseline-shift="sub">i</tspan>, v<tspan font-size="9" baseline-shift="sub">i</tspan>(t)) per site</text>
     </g>
 
     <!-- ========== COST MODULE (bottom-left) ========== -->
     <g>
-      <rect x="262" y="378" width="328" height="280" rx="8" fill="#fff7ed" stroke="#c2410c" stroke-width="1.2"></rect>
-      <text x="278" y="400" font-size="10.5" font-weight="700" fill="#c2410c" letter-spacing="1.4">COST MODEL</text>
-      <text x="278" y="420" font-size="12.5" font-weight="600" fill="#0f172a">Annualized cost = project-level + site-level</text>
-      <text x="278" y="438" font-size="11" fill="#334155">Cost decomposes into project-level (depends on N) and</text>
-      <text x="278" y="452" font-size="11" fill="#334155">site-level (depends on shore distance d<tspan font-size="8" baseline-shift="sub">i</tspan> per site).</text>
+      <rect x="262" y="282" width="328" height="280" rx="8" fill="#fff7ed" stroke="#c2410c" stroke-width="1.2"></rect>
+      <text x="278" y="304" font-size="10.5" font-weight="700" fill="#c2410c" letter-spacing="1.4">COST MODEL</text>
+      <text x="278" y="324" font-size="12.5" font-weight="600" fill="#0f172a">Annualized cost = project-level + site-level</text>
+      <text x="278" y="342" font-size="11" fill="#334155">Cost decomposes into project-level (depends on N) and</text>
+      <text x="278" y="356" font-size="11" fill="#334155">site-level (depends on shore distance d<tspan font-size="8" baseline-shift="sub">i</tspan> per site).</text>
 
       <!-- Combined inset: cost decomposition + annualized portfolio cost -->
-      <rect x="278" y="466" width="296" height="168" rx="5" fill="white" stroke="#fed7aa"></rect>
+      <rect x="278" y="370" width="296" height="168" rx="5" fill="white" stroke="#fed7aa"></rect>
 
       <!-- Project-level subsection -->
-      <text x="290" y="482" font-size="9.5" font-weight="700" fill="#c2410c" letter-spacing="0.8">PROJECT-LEVEL<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">C<tspan font-size="7" baseline-shift="sub">const</tspan>(N) — depends on number of devices</tspan></text>
-      <text x="290" y="498" font-size="11" fill="#0f172a">device manufacturing, installation,</text>
-      <text x="290" y="512" font-size="11" fill="#0f172a">subsystem integration, contingency,</text>
-      <text x="290" y="526" font-size="11" fill="#0f172a">environmental compliance, fixed OpEx</text>
+      <text x="290" y="386" font-size="9.5" font-weight="700" fill="#c2410c" letter-spacing="0.8">PROJECT-LEVEL<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">C<tspan font-size="7" baseline-shift="sub">const</tspan>(N) — depends on number of devices</tspan></text>
+      <text x="290" y="402" font-size="11" fill="#0f172a">device manufacturing, installation,</text>
+      <text x="290" y="416" font-size="11" fill="#0f172a">subsystem integration, contingency,</text>
+      <text x="290" y="430" font-size="11" fill="#0f172a">environmental compliance, fixed OpEx</text>
 
       <!-- Site-level subsection -->
-      <text x="290" y="544" font-size="9.5" font-weight="700" fill="#c2410c" letter-spacing="0.8">SITE-LEVEL<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">c<tspan font-size="7" baseline-shift="sub">site,i</tspan> — scales with shore distance d<tspan font-size="7" baseline-shift="sub">i</tspan></tspan></text>
-      <text x="290" y="560" font-size="11" fill="#0f172a">electrical infrastructure (cable + components),</text>
-      <text x="290" y="574" font-size="11" fill="#0f172a">cable installation (sized by d<tspan font-size="8" baseline-shift="sub">i</tspan>)</text>
+      <text x="290" y="448" font-size="9.5" font-weight="700" fill="#c2410c" letter-spacing="0.8">SITE-LEVEL<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">c<tspan font-size="7" baseline-shift="sub">site,i</tspan> — scales with shore distance d<tspan font-size="7" baseline-shift="sub">i</tspan></tspan></text>
+      <text x="290" y="464" font-size="11" fill="#0f172a">electrical infrastructure (cable + components),</text>
+      <text x="290" y="478" font-size="11" fill="#0f172a">cable installation (sized by d<tspan font-size="8" baseline-shift="sub">i</tspan>)</text>
 
       <!-- Divider -->
-      <line x1="290" y1="588" x2="562" y2="588" stroke="#fed7aa"></line>
+      <line x1="290" y1="492" x2="562" y2="492" stroke="#fed7aa"></line>
 
       <!-- Annualized cost section -->
-      <text x="290" y="604" font-size="9.5" font-weight="700" fill="#c2410c" letter-spacing="0.8">ANNUALIZED PORTFOLIO COST<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">[$/yr]</tspan></text>
-      <text x="290" y="624" font-size="12" fill="#0f172a" font-family="Georgia, serif">C<tspan font-size="8" baseline-shift="sub">annual</tspan> = C<tspan font-size="8" baseline-shift="sub">const</tspan>(N) + Σ<tspan font-size="8" baseline-shift="sub">i</tspan> x<tspan font-size="8" baseline-shift="sub">i</tspan> · c<tspan font-size="8" baseline-shift="sub">site,i</tspan></text>
+      <text x="290" y="508" font-size="9.5" font-weight="700" fill="#c2410c" letter-spacing="0.8">ANNUALIZED PORTFOLIO COST<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">[$/yr]</tspan></text>
+      <text x="290" y="528" font-size="12" fill="#0f172a" font-family="Georgia, serif">C<tspan font-size="8" baseline-shift="sub">annual</tspan> = C<tspan font-size="8" baseline-shift="sub">const</tspan>(N) + Σ<tspan font-size="8" baseline-shift="sub">i</tspan> x<tspan font-size="8" baseline-shift="sub">i</tspan> · c<tspan font-size="8" baseline-shift="sub">site,i</tspan></text>
 
       <!-- Output -->
-      <text x="278" y="650" font-size="11" font-weight="600" fill="#c2410c">Output:</text>
-      <text x="320" y="650" font-size="11" fill="#0f172a">C<tspan font-size="9" baseline-shift="sub">const</tspan>(N) and {c<tspan font-size="9" baseline-shift="sub">site,i</tspan>} per site</text>
+      <text x="278" y="554" font-size="11" font-weight="600" fill="#c2410c">Output:</text>
+      <text x="320" y="554" font-size="11" fill="#0f172a">C<tspan font-size="9" baseline-shift="sub">const</tspan>(N) and {c<tspan font-size="9" baseline-shift="sub">site,i</tspan>} per site</text>
     </g>
 
     <!-- ========== PORTFOLIO OPTIMIZATION (right, full-height) ========== -->
     <g>
-      <rect x="606" y="86" width="352" height="572" rx="8" fill="#ecfdf5" stroke="#15803d" stroke-width="1.2"></rect>
+      <rect x="606" y="86" width="352" height="476" rx="8" fill="#ecfdf5" stroke="#15803d" stroke-width="1.2"></rect>
       <text x="622" y="108" font-size="10.5" font-weight="700" fill="#15803d" letter-spacing="1.4">PORTFOLIO OPTIMIZATION</text>
       <text x="622" y="128" font-size="12.5" font-weight="600" fill="#0f172a">Variance-minimizing site selection</text>
       <text x="622" y="146" font-size="11" fill="#334155">Pick N sites to minimize joint output variance under an</text>
       <text x="622" y="162" font-size="11" fill="#334155">LCOE ceiling.</text>
 
-      <!-- Combined inset: covariance + BQP -->
-      <rect x="622" y="192" width="320" height="242" rx="5" fill="white" stroke="#bbf7d0"></rect>
-
-      <!-- Covariance section -->
-      <text x="634" y="210" font-size="9.5" font-weight="700" fill="#15803d" letter-spacing="0.8">COVARIANCE MATRIX<tspan font-weight="400" font-size="9" fill="#64748b" letter-spacing="0" dx="6">cross-site, from time series</tspan></text>
-      <text x="634" y="232" font-size="12.5" fill="#0f172a" font-family="Georgia, serif">Σ<tspan font-size="8" baseline-shift="sub">ij</tspan> = Cov( P<tspan font-size="8" baseline-shift="sub">i</tspan>(t), P<tspan font-size="8" baseline-shift="sub">j</tspan>(t) ),     P<tspan font-size="8" baseline-shift="sub">i</tspan>(t) = P( v<tspan font-size="8" baseline-shift="sub">i</tspan>(t) )</text>
-      <text x="634" y="250" font-size="10" font-style="italic" fill="#64748b">v<tspan font-size="8" baseline-shift="sub">i</tspan>(t) from the Energy module</text>
-
-      <!-- Divider -->
-      <line x1="634" y1="266" x2="930" y2="266" stroke="#bbf7d0"></line>
+      <!-- BQP inset -->
+      <rect x="622" y="192" width="320" height="168" rx="5" fill="white" stroke="#bbf7d0"></rect>
 
       <!-- BQP section -->
-      <text x="634" y="282" font-size="9.5" font-weight="700" fill="#15803d" letter-spacing="0.8">BINARY QUADRATIC PROGRAM</text>
-      <text x="634" y="306" font-size="13" fill="#0f172a" font-family="Georgia, serif">min<tspan dx="14">x' Σ x</tspan></text>
-      <text x="634" y="330" font-size="13" fill="#0f172a" font-family="Georgia, serif">s.t.<tspan dx="14">Σ<tspan font-size="8" baseline-shift="sub">i</tspan> x<tspan font-size="8" baseline-shift="sub">i</tspan> = N</tspan></text>
-      <text x="684" y="352" font-size="13" fill="#0f172a" font-family="Georgia, serif">C<tspan font-size="8" baseline-shift="sub">const</tspan>(N) + Σ<tspan font-size="8" baseline-shift="sub">i</tspan> x<tspan font-size="8" baseline-shift="sub">i</tspan> ( c<tspan font-size="8" baseline-shift="sub">site,i</tspan> − L · E<tspan font-size="8" baseline-shift="sub">i</tspan> ) ≤ 0</text>
-      <text x="684" y="374" font-size="13" fill="#0f172a" font-family="Georgia, serif">x<tspan font-size="8" baseline-shift="sub">i</tspan> ∈ {0, 1}<tspan font-family="Inter,sans-serif" font-size="10" font-style="italic" fill="#64748b" dx="14">for each candidate site i</tspan></text>
-      <text x="634" y="400" font-size="10" font-style="italic" fill="#15803d">solved with Gurobi (mixed-integer quadratic)</text>
-      <text x="634" y="418" font-size="10" font-style="italic" fill="#15803d">↻ swept over L ∈ {L₁, …, L_K} to trace efficient frontier</text>
+      <text x="634" y="210" font-size="9.5" font-weight="700" fill="#15803d" letter-spacing="0.8">BINARY QUADRATIC PROGRAM</text>
+      <text x="634" y="234" font-size="13" fill="#0f172a" font-family="Georgia, serif">min<tspan dx="14">x' Σ x</tspan><tspan font-family="Inter,sans-serif" font-size="10" font-style="italic" fill="#64748b" dx="14">Σ: cross-site power covariance</tspan></text>
+      <text x="634" y="258" font-size="13" fill="#0f172a" font-family="Georgia, serif">s.t.<tspan dx="14">Σ<tspan font-size="8" baseline-shift="sub">i</tspan> x<tspan font-size="8" baseline-shift="sub">i</tspan> = N</tspan></text>
+      <text x="684" y="280" font-size="13" fill="#0f172a" font-family="Georgia, serif">C<tspan font-size="8" baseline-shift="sub">const</tspan>(N) + Σ<tspan font-size="8" baseline-shift="sub">i</tspan> x<tspan font-size="8" baseline-shift="sub">i</tspan> ( c<tspan font-size="8" baseline-shift="sub">site,i</tspan> − L · E<tspan font-size="8" baseline-shift="sub">i</tspan> ) ≤ 0</text>
+      <text x="684" y="302" font-size="13" fill="#0f172a" font-family="Georgia, serif">x<tspan font-size="8" baseline-shift="sub">i</tspan> ∈ {0, 1}<tspan font-family="Inter,sans-serif" font-size="10" font-style="italic" fill="#64748b" dx="14">for each candidate site i</tspan></text>
+      <text x="634" y="328" font-size="10" font-style="italic" fill="#15803d">solved with Gurobi (mixed-integer quadratic)</text>
+      <text x="634" y="346" font-size="10" font-style="italic" fill="#15803d">↻ swept over L ∈ {L₁, …, L_K} to trace efficient frontier</text>
 
       <!-- Output -->
-      <text x="622" y="458" font-size="11" font-weight="600" fill="#15803d">Output:</text>
-      <text x="664" y="458" font-size="11" fill="#0f172a">x*(L) per L; envelope = efficient frontier</text>
+      <text x="622" y="386" font-size="11" font-weight="600" fill="#15803d">Output:</text>
+      <text x="664" y="386" font-size="11" fill="#0f172a">x*(L) per L; envelope = efficient frontier</text>
     </g>
 
     <!-- ========== INPUTS → METHODOLOGY ARROWS (drawn after modules so labels render on top) ========== -->
@@ -201,13 +184,14 @@
     <path d="M 220 260 H 262" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
 
     <!-- device (energy chars) → Energy module (curves up: device card sits below Energy module) -->
-    <path d="M 220 404 C 244 404, 244 340, 262 340" stroke="#a16207" stroke-width="1.4" fill="none" marker-end="url(#arrow-soft)" stroke-dasharray="4 3"></path>
-    <text x="226" y="396" font-size="10" fill="#854d0e" font-family="Georgia, serif">P(v), η</text>
+    <path d="M 220 404 C 244 404, 220 200, 250 200 L 262 200" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
+    <rect x="220" y="295" width="42" height="14" rx="2" fill="white"></rect>
+    <text x="241" y="306" font-size="10" text-anchor="middle" fill="#475569" font-family="Georgia, serif">P(v), η</text>
 
     <!-- device (cost chars) → Cost module -->
-    <path d="M 220 504 H 262" stroke="#a16207" stroke-width="1.4" fill="none" marker-end="url(#arrow-soft)" stroke-dasharray="4 3"></path>
-    <rect x="222" y="486" width="78" height="14" rx="2" fill="white"></rect>
-    <text x="226" y="496" font-size="10" fill="#854d0e" font-family="Georgia, serif">CapEx, OpEx, FCR</text>
+    <path d="M 220 504 H 262" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
+    <rect x="222" y="478" width="78" height="14" rx="2" fill="white"></rect>
+    <text x="241" y="489" font-size="9" font-style="italic" text-anchor="middle" fill="#475569" font-family="Georgia, serif">CapEx, OpEx, FCR</text>
 
     <!-- ========== INTERNAL ARROWS WITHIN METHODOLOGY ========== -->
     <!-- Energy → Portfolio Optimization -->
@@ -215,10 +199,10 @@
     <rect x="578" y="204" width="42" height="14" rx="2" fill="white"></rect>
     <text x="598" y="214" font-size="10" text-anchor="middle" fill="#475569" font-family="Georgia, serif">E<tspan font-size="8" baseline-shift="sub">i</tspan>, v<tspan font-size="8" baseline-shift="sub">i</tspan>(t)</text>
 
-    <!-- Cost → Portfolio Optimization -->
-    <path d="M 590 518 H 606" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
-    <rect x="552" y="502" width="92" height="14" rx="2" fill="white"></rect>
-    <text x="598" y="512" font-size="10" text-anchor="middle" fill="#475569" font-family="Georgia, serif">c<tspan font-size="8" baseline-shift="sub">site,i</tspan>, C<tspan font-size="8" baseline-shift="sub">const</tspan>(N)</text>
+    <!-- Cost → Portfolio Optimization (elbow: BQP's LCOE constraint at y=280 sits just above Cost's top edge at y=282) -->
+    <path d="M 590 528 H 600 V 290 H 606" stroke="#334155" stroke-width="1.6" fill="none" marker-end="url(#arrow)"></path>
+    <rect x="514" y="283" width="92" height="12" rx="2" fill="white"></rect>
+    <text x="560" y="292" font-size="9" text-anchor="middle" fill="#475569" font-family="Georgia, serif">c<tspan font-size="7" baseline-shift="sub">site,i</tspan>, C<tspan font-size="7" baseline-shift="sub">const</tspan>(N)</text>
 
     <!-- ========== METHODOLOGY → OUTPUTS ARROWS ========== -->
     <!-- single trunk from portfolio right edge → outputs cards -->
