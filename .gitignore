@@ -1,7 +1,15 @@
-# Drafts and ongoing experimental work — keep local
-experiments/
+# Experiments: track the recipe (source + docs), ignore generated outputs.
+# Ignore everything under experiments/, then re-include code + docs by extension.
+# Notebooks are treated as outputs and stay ignored.
+experiments/**
+!experiments/**/
+!experiments/**/*.py
+!experiments/**/*.m
+!experiments/**/*.sh
+!experiments/**/*.md
+
+# Local writing drafts (abstracts, notes, briefs) — keep local, not in the code repo
 writing/
-teaching/
 
 # Third-party tidal dataset (obtain separately, see README)
 inputs/roms/tide_data_east.dbf

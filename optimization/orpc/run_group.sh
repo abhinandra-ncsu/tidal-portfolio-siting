@@ -21,7 +21,11 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-VENV_PY="$REPO_DIR/.venv/bin/python"
+if [[ -x "$REPO_DIR/.venv/Scripts/python.exe" ]]; then
+    VENV_PY="$REPO_DIR/.venv/Scripts/python.exe"
+else
+    VENV_PY="$REPO_DIR/.venv/bin/python"
+fi
 MATLAB_BIN="${MATLAB_BIN:-/Applications/MATLAB_R2024b.app/bin/matlab}"
 
 export TIDAL_GROUP="$GROUP"

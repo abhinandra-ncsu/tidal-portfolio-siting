@@ -75,7 +75,7 @@ for mw in "${MW_TARGETS[@]}"; do
     fi
 
     t_start=$(date +%s)
-    if "$SCRIPT_DIR/run_group.sh" "$SCOPE" "$NE_NY_STATES"; then
+    if "$REPO_DIR/optimization/vp/run_group.sh" "$SCOPE" "$NE_NY_STATES"; then
         status="OK"
     else
         status="FAILED($?)"

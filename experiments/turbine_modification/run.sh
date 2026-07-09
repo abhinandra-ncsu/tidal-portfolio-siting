@@ -58,13 +58,13 @@ for variant in "${VARIANTS[@]}"; do
             t_start=$(date +%s)
             if [[ "$scope" == "pooled" ]]; then
                 unset TIDAL_GROUP TIDAL_STATE 2>/dev/null || true
-                if "$SCRIPT_DIR/run_state.sh" pooled; then
+                if "$REPO_DIR/optimization/vp/run_state.sh" pooled; then
                     status="OK"
                 else
                     status="FAILED($?)"
                 fi
             else
-                if "$SCRIPT_DIR/run_group.sh" "$scope" "$NE_NY_STATES"; then
+                if "$REPO_DIR/optimization/vp/run_group.sh" "$scope" "$NE_NY_STATES"; then
                     status="OK"
                 else
                     status="FAILED($?)"

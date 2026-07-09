@@ -85,7 +85,7 @@ for mw in "${MW_TARGETS[@]}"; do
     export TIDAL_P_TARGET_MW="$mw"
 
     t_start=$(date +%s)
-    if "$SCRIPT_DIR/run_group.sh" "$SCOPE" "$NE_NY_STATES"; then
+    if "$REPO_DIR/optimization/vp/run_group.sh" "$SCOPE" "$NE_NY_STATES"; then
         status="OK"
     else
         status="FAILED($?)"
