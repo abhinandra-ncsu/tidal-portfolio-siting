@@ -1,88 +1,116 @@
-# Turbine modification — device specification brief
+# Turbine modification — diameter ladder (device specification brief)
 
-**Date:** 2026-05-19
-**Status:** design locked, advisor sign-off pending
-**Supersedes:** earlier 48-node (D × P_rated) grid design (see git history); reframed after Stage 1 diagnosis at `experiments/turbine_modification/diagnosis/`
+**Date:** 2026-06-08
+**Status:** draft for review
+**Supersedes:** the shrink-only D = 5 → 2 design (variants `gen5`, `modvp4`, `modvp3`, `modvp2`; brief at `results/vp/turbine_modification/turbine_modification.md`). This brief extends the family upward to D = 8 m and re-derives `v_rated` for the whole ladder under one uniform rule.
 
 ---
 
+## Why re-run
+
+The old family only shrank the rotor. It never asked the opposite question: does a *bigger* rotor help? Bigger rotor means more swept area and more energy per device — but the ≥2D depth rule confines it to deeper water, which carries fewer eligible sites and (per the shallow-band finding) slower upper-tail currents. The tradeoff could break either way on the CV/LCOE frontier. Nobody has looked.
+
+Adding the larger variants forces a second change. The old `v_rated` rule sized each smaller device to its **incremental shallow band [2D, 10) m** — the sites it uniquely unlocks. A larger device unlocks nothing; it is a strict subset of Gen5's deep sites, so the rule has no upward analog. We therefore re-derive `v_rated` for **all seven variants** under one uniform rule (below). This rewrites the smaller variants' speeds, so the family is re-run from scratch for internal consistency rather than appended to.
+
 ## Family
 
-Four Verdant Gen5-class horizontal-axis tidal turbines: the Gen5 baseline at D = 5 m plus three smaller-rotor "Modified Verdant" variants at D = 2, 3, 4 m. Same architecture across the family (3 generators per Triframe). They differ only in rotor diameter and the operating quantities that follow from it.
+Seven Verdant Gen5-class horizontal-axis tidal turbines: the Gen5 baseline at D = 5 m, three smaller variants (D = 4, 3, 2 m), and three larger variants (D = 6, 7, 8 m). Same architecture across the family — 3 generators per TriFrame, Cp = 0.37, generation voltage 480 V, depth filter ≥ 2D. They differ only in rotor diameter and the quantities that follow from it.
 
 ## Variant specification
 
-| Variant | D (m) | A (m²) | v_rated (m/s) | v_cut_in (m/s) | P_rated (kW) | Depth filter |
-|---|---|---|---|---|---|---|
-| Gen5 (baseline) | 5 | 19.63 | 2.03 | 0.61 | 31.2 | ≥ 10 m |
-| ModVP-4 | 4 | 12.57 | 2.33 | 0.70 | 30.1 | ≥ 8 m |
-| ModVP-3 | 3 | 7.07 | 2.32 | 0.70 | 16.8 | ≥ 6 m |
-| ModVP-2 | 2 | 3.14 | 2.22 | 0.67 | 6.5 | ≥ 4 m |
+Cost and geometry are fixed by D and are filled below. The three speed-derived quantities (`v_rated`, `v_cut_in`, `P_rated`) are produced by `derive_variants.py` (see *Derivation*) and are marked pending here — they must not be hand-set.
 
-## How these numbers are derived
+| Variant | D (m) | A (m²) | Depth ≥ | v_rated (m/s) | v_cut_in (m/s) | P_rated (kW) | **C_device** |
+|---|---|---|---|---|---|---|---|
+| modvp2 | 2 | 3.14 | 4 m | _pending_ | _pending_ | _pending_ | **$417.0K** |
+| modvp3 | 3 | 7.07 | 6 m | _pending_ | _pending_ | _pending_ | **$640.5K** |
+| modvp4 | 4 | 12.57 | 8 m | _pending_ | _pending_ | _pending_ | **$967.0K** |
+| **gen5 (baseline)** | **5** | **19.63** | **10 m** | _pending_ | _pending_ | _pending_ | **$1,402.5K** |
+| modvp6 | 6 | 28.27 | 12 m | _pending_ | _pending_ | _pending_ | **$1,952.9K** |
+| modvp7 | 7 | 38.48 | 14 m | _pending_ | _pending_ | _pending_ | **$2,623.9K** |
+| modvp8 | 8 | 50.27 | 16 m | _pending_ | _pending_ | _pending_ | **$3,420.5K** |
 
-Three Lewis et al. (2021) standardizations are taken as given for the entire family: **Cp = 0.37**, **v_cut_in = 0.30*v_rated**, and ρ = 1025 kg/m³ (seawater). The depth filter ≥ 2D is a deployment-clearance convention (rotor diameter D plus equal clearance above and below the rotor hub).
+Naming follows the existing convention (`modvp<D>`); the three new variants are `modvp6`, `modvp7`, `modvp8`. Gen5 keeps its name and its role as the comparison reference.
 
-The remaining per-variant numbers are derived in this order:
+A = π(D/2)². Depth filter = 2D (rotor diameter plus equal clearance above and below the hub).
 
-1. **v_rated** is set to the 99.5th-percentile of per-site maximum tidal current speed (U_max, computed from the existing t_predic harmonic reconstruction at hourly resolution over 2013) on the device's uniquely-eligible site set:
-   - For the **D = 5 baseline**, the eligible set is the full Gen5 candidate population at depth ≥ 10 m.
-   - For the **modified variants**, the eligible set is the incremental shallow band [2D, 10) m — i.e., the sites the smaller device can reach that Gen5 cannot. This sizes v_rated to the population each modification is justified by.
+## Derivation — `derive_variants.py`
 
-2. **P_rated = ½ · ρ · A · Cp · v_rated³** (cube law at the rated point).
+A single checked-in script produces the speed column for all seven variants, so the ladder is reproducible instead of a set of literals. It writes the full `VARIANTS` dict that `config.py` consumes.
+
+**The uniform v_rated rule.** For each variant:
+
+1. Take the candidate population at depth ≥ 2D — the device's **full eligible set**.
+2. For each site in that set, compute **U_max**, the per-site maximum tidal current speed, from the existing t_predic harmonic reconstruction at hourly resolution over 2013.
+3. **v_rated = p99.5 of U_max** across that eligible set.
+
+This is the same percentile and the same reconstruction the baseline already used; the only change is that *every* variant now uses its full eligible set [2D, ∞) rather than an incremental band. The rule applies identically up and down the ladder.
+
+Expected shape of the result (to confirm on run, not assume): smaller D reaches shallow, fast-tail sites and lands a higher v_rated; larger D is confined to deep, calmer water and lands a lower one. Gen5's eligible set is exactly [10, ∞) m, so its v_rated is unchanged from the current 2.03 m/s — the baseline is held fixed by construction, and the other six move around it.
+
+**Then, per variant, deterministically:**
+
+- v_cut_in = 0.30 · v_rated   (Lewis et al. 2021 standardization)
+- P_rated = ½ · ρ · A · Cp · v_rated³,   ρ = 1025 kg/m³, Cp = 0.37
+- P_TriFrame = 3 · P_rated
+
+**I/O.** Inputs: the candidate set with per-site depth, and the harmonic reconstruction over the candidate population (sources: the same `harmonics.nc` / `candidates.nc` the pipeline already produces; exact field names confirmed at implementation). Output: a `VARIANTS` table (printed + written to `experiments/turbine_modification/variants_derived.csv`) that is pasted into `config.py`. The script is the reviewable first implementation step — its table gets sign-off before any 40-cell sweep runs.
+
+## Cost
+
+C_device decomposes into five line items. The three turbine-package items scale with rotor diameter from the Gen5 anchors; the support structure and monitoring are held flat. Scaling exponents from Mattia (2025) Ch. 2.1:
+
+| Line item | Gen5 anchor | Exponent | Formula |
+|---|---|---|---|
+| Rotors (×3) | $219,000 | D^2.7 | `$219K · (D/5)^2.7` |
+| IMA (×3) | $510,000 | D^2.0 | `$510K · (D/5)^2.0` |
+| Nacelle/Pylon/Cones (×3) | $424,500 | D^2.0 | `$424.5K · (D/5)^2.0` |
+| TriFrame | $187,000 | — | held flat |
+| SCADA | $62,000 | — | held flat |
+
+The power-law items extrapolate upward without issue; the C_device column above is computed from these formulas.
+
+**Caveat — TriFrame held flat going up.** Freezing the TriFrame at the Gen5 5 m value across the family is clean shrinking down (smaller rotor on the same-or-lighter support), but it understates structure cost for the larger rotors — an 8 m rotor would in reality need a heavier frame. We accept it by choice. The optimism is bounded: at D = 8 the frozen $187K TriFrame is ~5.5% of a $3.42M device, so it cannot move LCOE much. Flagged here; revisit only if the large-D variants land near a feasibility boundary where 5% matters.
+
+**Caveat — IMA exponent is approximate** (carried over). Mattia's drivetrain cost is torque-driven (T ∝ D²·v_rated³), not pure-D. Collapsing to D^2.0 assumes constant v_rated across the family; our v_rated varies with D, so the D^2.0 IMA cost is approximate. Direction: larger variants have *lower* v_rated, so true torque grows slower than D² and the D^2.0 rule slightly *over*-states their IMA cost (conservative). Acceptable under simple scaling.
+
+## Electrical and installation (reused, unchanged)
+
+The cable-cost and installation methodology from the existing VP pipeline is reused across the family without re-derivation, valid under two held assumptions:
+
+1. **Generation voltage V = 480 V is constant across all seven variants.** Per-TriFrame current I = P_TF / (√3·V·PF) shifts only because P_TF shifts; the ABB cable selector reruns against the same catalog (cheapest three-core 10 kV CSA meeting ≤10% transmission loss, plus Mattia per-meter installation).
+2. **TriFrame-of-3 architecture is preserved**, so P_TF = 3·P_rated, keeping the per-TriFrame cable-sizing formula valid.
+
+Installation (jack-up device placement + Mattia per-meter cable laying) flows through unchanged: N TriFrames and total cable length L_total are already explicit parameters. TriFrame assembled mass is a per-variant device-spec input feeding the crane-capacity rule; the larger variants need a mass figure (resolved with the speed derivation, or held at the Gen5-rule scaling — to confirm).
+
+## Experiment grid
+
+Each variant runs the existing 40-cell template, both scopes:
+
+- **Scope:** new_england_new_york, pooled (2)
+- **MW target:** 1, 5, 25, 100 (4)
+- **LCOE target:** 600, 700, …, 1500 — a 10-point frontier emitted by one solve
+
+= 4 MW × 10 LCOE = **40-point frontier per variant per scope**. Seven variants × two scopes = 56 pipeline runs. The driver is `run_turbine_modification.sh` with `VARIANTS=(gen5 modvp4 modvp3 modvp2 modvp6 modvp7 modvp8)`.
+
+Per-cell metric is **CV** (coefficient of variation), with energy, pool size, and floor as support — consistent with the rest of the portfolio work. Gen5 is the reference each variant is read against.
+
+## Covariance — no shortcut
+
+The old `Σ^D = (A_D/A_5)²·Σ^5` area-scaling trick (see `optimization/vp/methodology/diameter_scaling_note.md`) is **only exact when v_rated is D-independent**. We vary v_rated with D, so the power-curve shape (rated and cut-in points) shifts per variant and the trick is invalid. Each variant gets a full `compute_covariance.m` build, as the existing per-cell `covariance.nc` files already do. No operational change; noted so nobody reaches for the shortcut.
+
+## Results layout and archiving
+
+Outputs follow the scope-level convention to `results/vp/turbine_modification/<variant>/groups/<scope>/<MW>mw/`. The existing `gen5`/`modvp2`/`modvp3`/`modvp4` trees there are from the superseded shrink-only design with the old v_rated numbers, so they are **stale and must not be mixed** with the new run. Before the sweep: archive the current `results/vp/turbine_modification/` (e.g. to `…/_archive_shrink_only/`), then run the full seven-variant ladder fresh. Decision to confirm before running.
 
 ## Acknowledged design choices
 
-Two judgement calls in this specification:
+1. **Uniform full-eligible-set v_rated rule.** Chosen for method consistency across a family that now spans D = 2–8. It replaces the old incremental-shallow-band justification and flattens the small-variant spread the old design engineered. Accepted: a single reproducible rule across the whole ladder is worth more than the hand-tuned shallow-band signal.
+2. **TriFrame/SCADA held flat** (see cost caveat) — optimism for large D, bounded to ~5% of device cost at D = 8.
+3. **p99.5 percentile** for v_rated, carried over: for the D = 5 baseline it reproduces Verdant's published P_rated to within 4%, the unique percentile among {p50…p99.9} that does so.
 
-1. **The 99.5th-percentile choice for v_rated** was selected because, for the D = 5 baseline, applying the cube law (P_rated = ½·ρ·A·Cp·v_rated³) to Verdant's published P_rated = 35 kW gives v_rated = 2.11 m/s, and p99.5 of per-site U_max reproduces that value to within 4%. p99.5 is the unique percentile among {p50, p75, p90, p95, p99, p99.5, p99.9} that achieves this.
+## Open items before implementation
 
-2. **Incremental band [2D, 10) m for the modified variants' v_rated** is justified by: each modified variant's v_rated should be sized to the sites it adds, not to the sites Gen5 already serves. The alternative (using the full eligible set [2D, ∞) m for every variant) gives ≤ 5% spread in v_rated across all four variants — i.e., effectively no per-D variation. The incremental-band choice produces ~15% variation between the baseline and the modified variants, which is a real resource-derived signal: the shallow sites newly unlocked by smaller D have systematically faster upper-tail velocities than the deep sites Gen5 serves.
-
-## Electrical infrastructure
-
-The cable-cost methodology from the existing VP pipeline (cheapest ABB three-core 10 kV CSA meeting ≤ 10% transmission loss, plus Mattia per-meter installation) is reused across the family without re-derivation. Cable from each TriFrame to shore is the only electrical infrastructure cost. Two assumptions make this reuse valid:
-
-1. **Generation voltage V = 480 V is held constant across all four variants.** Per-TriFrame current I = P_TF / (√3 · V · PF) then shifts only because P_TF shifts, and the cable selector reruns against the same ABB catalog. 480 V 3-phase is appropriate across the kW range spanned by the family, but is held by choice, not derived per variant.
-
-2. **TriFrame-of-3 architecture is preserved across all four variants**, so P_TF = 3 · P_rated. Already stated in the family description above; called out here because it is what keeps the per-TriFrame cable sizing formula valid across the family.
-
-## Installation
-
-The installation methodology from the existing VP pipeline (Phase 1: jack-up device placement; Phase 2: Mattia per-meter cable laying) is reused across the family without re-derivation. Number of TriFrames N and total cable length L_total are already explicit parameters in the formulas, so portfolio scale-up under smaller variants flows through the existing machinery. One assumption makes this reuse valid:
-
-1. **TriFrame assembled mass is treated as a device-spec input per variant**, the same way as in the Gen5 baseline. It feeds the jack-up crane-capacity rule (65% × mass → crane tonnage → Mattia day-rate function). Gen5 uses 94,966 kg → 150-tonne crane → $33,647/day; modified variants resize through the same rule once per-variant mass is available.
-
-## Device cost
-
-C_device for the Gen5 baseline ($1,402,500 per TriFrame, from VP MHKDR 318) decomposes into five line items: Rotors (×3) $219K, IMA (×3) $510K, Nacelle/Pylon/Cones (×3) $424.5K, TriFrame 5m $187K, SCADA $62K. Modified variants keep the Gen5 dollar anchors and scale only the three turbine-package line items with rotor diameter. TriFrame and SCADA stay at Gen5 values across the family (same support structure, same per-array monitoring).
-
-Scaling exponents are taken from Mattia (2025) Chapter 2.1:
-
-| Line item | Gen5 anchor | Exponent | Formula | Mattia source |
-|---|---|---|---|---|
-| Rotors (×3) | $219,000 | D^2.7 | `C_rotors = $219K × (D/5)^2.7` | Eq. 3 (blade-dominant) |
-| IMA (×3) | $510,000 | D^2.0 | `C_IMA = $510K × (D/5)^2.0` | Drivetrain bundle (Eqs. 19–30, 37) |
-| Nacelle/Pylon/Cones (×3) | $424,500 | D^2.0 | `C_NPC = $424.5K × (D/5)^2.0` | Eqs. 31–36 (cover as pressure vessel) |
-
-Per-variant C_device:
-
-| Variant | D (m) | C_rotors | C_IMA | C_NPC | C_TriFrame | C_SCADA | **C_device** |
-|---|---|---|---|---|---|---|---|
-| Gen5 | 5 | $219.0K | $510.0K | $424.5K | $187K | $62K | **$1,402.5K** |
-| ModVP-4 | 4 | $119.9K | $326.4K | $271.7K | $187K | $62K | **$967.0K** |
-| ModVP-3 | 3 | $55.1K | $183.6K | $152.8K | $187K | $62K | **$640.5K** |
-| ModVP-2 | 2 | $18.5K | $81.6K | $67.9K | $187K | $62K | **$417.0K** |
-
-### Scaling assumptions for the diameter-scaled lines
-
-D^2.7 (Rotors) is taken verbatim from Mattia Eq. 3; the two D^2.0 exponents (IMA, NPC) are our own reductions of Mattia's torque-driven and pressure-vessel mechanics. All three apply a single exponent to a multi-component line and hold fixed a quantity that varies across the family — but the resulting errors do not all point the same way.
-
-**Rotors — verbatim blade exponent applied to the hub+blade line; plausibly under-charges the modified variants.** D^2.7 is Mattia's empirical *blade* cost metric (Eq. 3, `40·(D/2)^2.7`); the hub scales as D^2.0 (Eq. 7). Applying 2.7 to the combined "Hub + 3 blades" line assumes blade cost dominates the hub — unverified, since Verdant books the rotor as one $219K line with no blade/hub split. If the hub share is material the effective exponent falls toward 2.0, which for D < 5 raises rotor cost above the rule, i.e. under-charges the modified variants. Separately, Eq. 3 is purely geometric and carries no load term: the modified variants' higher v_rated (~32% in v², the thrust driver) would demand stronger blades, pushing the same direction. Mattia offers no v-dependent blade-cost function, so both effects are flagged by direction only, not quantified.
-
-**IMA — assumes constant v_rated; under-charges the modified variants.** The drivetrain bundle is torque/power-sized, not geometry-sized: gearbox mass ∝ T_LSS^0.77, generator cost ≈ linear in T, power converter linear in P. Mapping to diameter via T ∝ P ∝ D²·v_rated³ collapses to D^2.0 **only if v_rated is constant across the family** — it is not (2.03→2.33 m/s; ~15%, ~52% in v³). A power-faithful sizing scales IMA by P_rated instead; against it the D^2.0 rule under-charges the modified variants' IMA by ≈30–50% (≈+17% on C_device for ModVP-4). The gearbox's sub-linear T^0.77 (≈v^2.3, not v³) puts the true bottom-up a little below the full-v³ figure — same direction, smaller. The whole IMA line (incl. brake) is scaled by this single drivetrain exponent.
-
-**NPC — assumes constant depth and length; over-charges the modified variants.** The cover is sized as a hydrostatic pressure vessel (Eqs. 31–36): P = ρ·g·h, Mariotte t = P·D/(2σ) → t ∝ D, cylinder shell mass ∝ D²·L. Collapsing to D^2.0 rests on four held-constant assumptions: (a) cover diameter scales with rotor D; (b) deployment depth — hence pressure P — is constant; (c) cylinder length L is constant; (d) the cylinder dominates the hemispherical end-cap (itself a D³ term). Because the depth filter is 2D, a depth-faithful cover (sized to each variant's own shallower band) scales as (D/5)²·(h/10) = (D/5)³, and L ∝ D steepens it to D³ independently — either makes the modified variants ≈20–60% cheaper than the rule. A minimum wall gauge floors the thinning at small D, flattening the curve at the ModVP-2 end. Unlike IMA's v_rated, none of (a)–(d) is forced to vary by the spec, so holding them fixed is a legitimate design choice, not a dropped term.
-
-Net direction across the three lines: Rotors and IMA both under-charge the modified variants (faster v_rated → stronger blades and more drivetrain torque), while NPC over-charges them (shallower deployment, steeper-than-D² geometry) — so the errors partially offset on C_device. All are acceptable under the simple-scaling approach; flagged here for transparency.
-
+- [ ] Confirm `derive_variants.py` I/O against actual `harmonics.nc` / `candidates.nc` field names.
+- [ ] Decide large-variant TriFrame **mass** input (for the crane/installation rule).
+- [ ] Confirm archive-then-rerun of the stale `results/vp/turbine_modification/` tree.
