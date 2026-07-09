@@ -39,9 +39,22 @@ else
 end
 if ~exist(resultsDir, 'dir'), mkdir(resultsDir); end
 fprintf('Results dir: %s\n', resultsDir);
-candidatesFile = fullfile(resultsDir, 'candidates.nc');
-harmonicsFile  = fullfile(resultsDir, 'harmonics.nc');
-outputFile     = fullfile(resultsDir, 'covariance.nc');
+
+% harmonics.nc is resource-only (identical across every power curve); read it
+% from the shared resource dir when set, else from resultsDir (single-dir runs).
+envResource = getenv('TIDAL_RESOURCE_DIR');
+if ~isempty(envResource), resourceDir = envResource; else, resourceDir = resultsDir; end
+
+% candidates.nc / covariance.nc are curve-level (shared across capacities
+% within a power curve); they live in the shared curve dir when set, else in
+% resultsDir.
+envCurve = getenv('TIDAL_CURVE_DIR');
+if ~isempty(envCurve), curveDir = envCurve; else, curveDir = resultsDir; end
+if ~exist(curveDir, 'dir'), mkdir(curveDir); end
+
+candidatesFile = fullfile(curveDir, 'candidates.nc');
+harmonicsFile  = fullfile(resourceDir, 'harmonics.nc');
+outputFile     = fullfile(curveDir, 'covariance.nc');
 
 if exist(outputFile, 'file')
     fprintf('Already exists: %s\nDelete to re-run.\n', outputFile);
@@ -123,7 +136,7 @@ fprintf('\nTime: %s to %s, %d steps\n', datestr(cfg.tmin), datestr(cfg.tmax), n_
 
 %% Reconstruct power timeseries (parallel)
 pool = gcp('nocreate');
-if isempty(pool), pool = parpool; end
+if isempty(pool), pool = parpool('Threads', 8); end
 fprintf('Using %d workers for %d candidates\n\n', pool.NumWorkers, n_cand);
 
 power_matrix = zeros(n_times, n_cand, 'single');

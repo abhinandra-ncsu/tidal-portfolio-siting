@@ -9,6 +9,9 @@ solves the Binary Quadratic Program:
           C_const(N) + sum x_i (c_site_i - L*E_i) <= 0   (LCOE ceiling)
           x_i in {0,1}
 
+Under TIDAL_OBJECTIVE=energy the objective becomes  max sum(E_i x_i)  with the
+same constraints — a linear ILP. See experiments/max_energy_objective/EXPERIMENT.md.
+
 Input:  ../results/candidates.nc  (from 03_screen_candidates.py)
         ../results/covariance.nc  (from compute_covariance.m)
 Output: ../results/optimization_results.nc
@@ -37,6 +40,8 @@ from config.config import (
     HOURS_PER_YEAR, ETA_AVAIL,
     # Electrical
     MAX_LOSS, CABLES,
+    # Transmission step-up (experiments/transmission_stepup/EXPERIMENT.md)
+    STEPUP_KV, C_TRANSFORMER_PER_TF,
     # Cost — device
     C_DEVICE_UNIT1, LEARNING_EXP,
     # Cost — installation
@@ -48,10 +53,10 @@ from config.config import (
     # Annualization
     FCR,
     # Optimization
-    P_TARGET_MW, LCOE_TARGETS,
+    P_TARGET_MW, LCOE_TARGETS, OBJECTIVE,
     # Solver
     GUROBI_TIME_LIMIT, GUROBI_MIP_GAP,
-    get_results_dir,
+    get_results_dir, get_curve_dir,
 )
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -59,15 +64,20 @@ ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
 RESULTS_DIR = get_results_dir()
 
-CANDIDATES_PATH = os.path.join(RESULTS_DIR, "candidates.nc")
-COVARIANCE_PATH = os.path.join(RESULTS_DIR, "covariance.nc")
+# candidates.nc / covariance.nc live at the curve level (shared across
+# capacities); the optimizer reads them from the curve dir and writes its
+# per-capacity result into RESULTS_DIR. TIDAL_CURVE_DIR falls back to
+# RESULTS_DIR when unset.
+_CURVE_DIR = get_curve_dir()
+CANDIDATES_PATH = os.path.join(_CURVE_DIR, "candidates.nc")
+COVARIANCE_PATH = os.path.join(_CURVE_DIR, "covariance.nc")
 RESULTS_PATH = os.path.join(RESULTS_DIR, "optimization_results.nc")
 
 # Loss formula: 3 * I^2 * R * L / P, with I = P_TF / (sqrt(3) * V * PF).
-# V = 480 V and PF = 0.95 held constant across the variant family
-# (see EXPERIMENT.md §Electrical infrastructure).
-# gen5 (P_TF=105 kW) reproduces 0.505; smaller variants scale linearly with P_TF.
-_V_GEN_VOLTS = 480.0
+# PF = 0.95 held constant across the variant family. Generation voltage is
+# 480 V baseline; the transmission step-up experiment overrides to STEPUP_KV
+# (see experiments/transmission_stepup/EXPERIMENT.md).
+_V_GEN_VOLTS = (STEPUP_KV * 1000.0) if STEPUP_KV is not None else 480.0
 _PF = 0.95
 _I_AMPS = (P_TRIFRAME_KW * 1000.0) / (np.sqrt(3.0) * _V_GEN_VOLTS * _PF)
 LOSS_COEFF = 3.0 * _I_AMPS**2 / (P_TRIFRAME_KW * 1000.0)
@@ -145,9 +155,14 @@ def compute_c_const(N):
     # Environmental compliance (constant portion)
     c_ec_const = EC_FRAC * (c_device_total + c_subsys + c_contin_const)
 
+    # Step-up transformer (zero when step-up is off — see experiments/transmission_stepup).
+    # Treated like the cable/electrical items: added as raw CapEx so FCR + insurance
+    # apply, but NOT the contingency/EC cascade.
+    c_transformer = N * C_TRANSFORMER_PER_TF
+
     # Total constant CapEx
     capex_const = (c_device_total + c_inst_device + c_subsys
-                   + c_contin_const + c_ec_const)
+                   + c_contin_const + c_ec_const + c_transformer)
 
     # Annualized constant cost
     annual_capex = FCR * capex_const
@@ -181,9 +196,11 @@ def compute_c_site(cable_cost_total, laying_cost):
 
 def solve_bqp(n, Sigma, N, c_const, c_site, E, L):
     """
-    Solve the BQP via gurobipy.
+    Solve the site-selection program via gurobipy.
 
-    min   x^T Sigma x
+    min   x^T Sigma x        (OBJECTIVE == "variance": BQP)
+    or
+    max   sum(E_i x_i)       (OBJECTIVE == "energy": linear ILP)
     s.t.  sum(x_i) = N
           c_const + sum x_i (c_site_i - L*E_i) <= 0
           x_i binary
@@ -194,12 +211,20 @@ def solve_bqp(n, Sigma, N, c_const, c_site, E, L):
     model.Params.TimeLimit = GUROBI_TIME_LIMIT
     model.Params.MIPGap = GUROBI_MIP_GAP
     model.Params.NumericFocus = 2
+    if OBJECTIVE == "energy":
+        # The ILP solves in seconds; the BQP's 2% gap would leave E_max
+        # non-monotone in L and corrupt the top-N degeneracy flag. Solve
+        # to proven optimality.
+        model.Params.MIPGap = 0.0
 
     # Binary decision variables
     x = model.addMVar(n, vtype=gp.GRB.BINARY, name="x")
 
-    # Objective: min x^T Sigma x
-    model.setObjective(x @ Sigma @ x, gp.GRB.MINIMIZE)
+    # Objective: min portfolio variance, or max delivered energy
+    if OBJECTIVE == "energy":
+        model.setObjective(E @ x, gp.GRB.MAXIMIZE)
+    else:
+        model.setObjective(x @ Sigma @ x, gp.GRB.MINIMIZE)
 
     # Constraint 1: sum(x_i) = N
     model.addConstr(x.sum() == N, name="deploy")
@@ -321,21 +346,24 @@ def main():
         print(f"Solving: N={N}, LCOE target={L} $/MWh")
         print(f"{'─'*60}")
 
-        # Quick feasibility: need at least N sites with c_site_i < L*E_i
-        feasible_mask = (c_site - L * E) < 0
-        n_feasible = feasible_mask.sum()
-        if n_feasible < N:
-            print(f"  INFEASIBLE: only {n_feasible} sites can meet LCOE, need {N}")
-            results.append({
-                "lcoe_target": L, "status": "infeasible",
-                "variance": np.nan, "achieved_lcoe": np.nan,
-                "selected": np.zeros(n_sites, dtype=np.int32),
-            })
-            continue
-
-        # Check if constraint can be satisfied
-        # Best case: pick N sites with most negative (c_site_i - L*E_i)
         margins = c_site - L * E
+
+        if OBJECTIVE != "energy":
+            # Screen-consistent pre-check: the margin<0 reduction below needs
+            # at least N sites to pick from. (Skipped under max-energy, where
+            # positive-margin sites stay selectable.)
+            n_feasible = (margins < 0).sum()
+            if n_feasible < N:
+                print(f"  INFEASIBLE: only {n_feasible} sites can meet LCOE, need {N}")
+                results.append({
+                    "lcoe_target": L, "status": "infeasible",
+                    "variance": np.nan, "achieved_lcoe": np.nan,
+                    "selected": np.zeros(n_sites, dtype=np.int32),
+                })
+                continue
+
+        # Exact feasibility check (objective-independent): the N most negative
+        # margins are the best case the LCOE constraint can ever see.
         best_n = np.sort(margins)[:N]
         if c_const + best_n.sum() > 0:
             print(f"  INFEASIBLE: even best {N} sites can't meet LCOE "
@@ -347,18 +375,28 @@ def main():
             })
             continue
 
-        # Restrict to sites with negative LCOE margin: any site with
-        # c_site_i - L*E_i >= 0 can never be in an optimal solution at this L
-        # (it would push the LCOE constraint the wrong way), so we drop them
-        # before building the dense Q. This shrinks Sigma quadratically and
-        # is what makes Gurobi fit in memory at n_sites ~ 18k.
-        keep_idx = np.where(margins < 0)[0]
+        if OBJECTIVE == "energy":
+            # Keep every site: a positive-margin site can be optimal when other
+            # sites' slack pays for it (experiments/max_energy_objective/
+            # EXPERIMENT.md, trap 1). The linear objective builds no dense Q,
+            # so the full problem fits; Sigma stays unsliced (unused by the
+            # solve, read only for post-hoc variance reporting).
+            keep_idx = np.arange(n_sites)
+            Sigma_red = Sigma
+            print(f"  Full problem: {n_sites} sites (linear objective)")
+        else:
+            # Restrict to sites with negative LCOE margin: any site with
+            # c_site_i - L*E_i >= 0 can never be in an optimal solution at this L
+            # (it would push the LCOE constraint the wrong way), so we drop them
+            # before building the dense Q. This shrinks Sigma quadratically and
+            # is what makes Gurobi fit in memory at n_sites ~ 18k.
+            keep_idx = np.where(margins < 0)[0]
+            Sigma_red = Sigma[np.ix_(keep_idx, keep_idx)]
+            print(f"  Reduced problem: {keep_idx.size} sites "
+                  f"(Q terms: {keep_idx.size*(keep_idx.size+1)//2:,})")
         n_red = keep_idx.size
-        Sigma_red = Sigma[np.ix_(keep_idx, keep_idx)]
         c_site_red = c_site[keep_idx]
         E_red = E[keep_idx]
-        print(f"  Reduced problem: {n_red} sites "
-              f"(Q terms: {n_red*(n_red+1)//2:,})")
 
         # Solve BQP on the reduced problem
         print("  Solving with Gurobi...")
@@ -396,6 +434,11 @@ def main():
         total_energy = E[sel].sum()
         total_site_cost = c_site[sel].sum()
         achieved_lcoe = (c_const + total_site_cost) / total_energy
+        # LCOE-constraint slack ($/yr): ~0 = binding, >0 = loose. Under the
+        # energy objective, loose means the solve degenerated to top-N-by-E
+        # (EXPERIMENT.md, degeneracy check); the set comparison itself is
+        # derived offline from the per-site fields saved below.
+        lcoe_slack = -(c_const + total_site_cost - L * total_energy)
 
         print(f"\n  Solution:")
         print(f"    Selected: {n_sel} sites")
@@ -404,12 +447,14 @@ def main():
         print(f"    C_const: ${c_const:,.0f}/yr")
         print(f"    Site costs: ${total_site_cost:,.0f}/yr")
         print(f"    Achieved LCOE: ${achieved_lcoe:,.0f}/MWh")
+        print(f"    LCOE slack: ${lcoe_slack:,.0f}/yr")
         print(f"    Lat range: {lat[sel].min():.2f} to {lat[sel].max():.2f}")
         print(f"    Lon range: {lon[sel].min():.2f} to {lon[sel].max():.2f}")
 
         results.append({
             "lcoe_target": L, "status": "optimal",
             "variance": variance, "achieved_lcoe": achieved_lcoe,
+            "lcoe_slack": lcoe_slack,
             "selected": selected,
         })
 
@@ -424,6 +469,9 @@ def main():
     out_lcoe_target = np.array(LCOE_TARGETS, dtype=np.float64)
     out_variance = np.array([r["variance"] for r in results], dtype=np.float64)
     out_achieved_lcoe = np.array([r["achieved_lcoe"] for r in results], dtype=np.float64)
+    # .get: infeasible/error rows carry no slack
+    out_lcoe_slack = np.array([r.get("lcoe_slack", np.nan) for r in results],
+                              dtype=np.float64)
     out_status = np.array([r["status"] for r in results])
     out_selected = np.stack([r["selected"] for r in results])  # (n_targets, n_sites)
 
@@ -433,6 +481,7 @@ def main():
             "lcoe_target": (["target"], out_lcoe_target, {"units": "$/MWh"}),
             "variance": (["target"], out_variance, {"units": "W^2"}),
             "achieved_lcoe": (["target"], out_achieved_lcoe, {"units": "$/MWh"}),
+            "lcoe_slack": (["target"], out_lcoe_slack, {"units": "$/yr"}),
             "status": (["target"], out_status),
             "selected": (["target", "site"], out_selected),
 
@@ -457,6 +506,7 @@ def main():
             "N_triframes": N,
             "C_const": c_const,
             "loss_formula": "0.505 * R * L",
+            "objective": OBJECTIVE,
             "solver": "Gurobi via gurobipy",
             "created": datetime.now(timezone.utc).isoformat(),
         },

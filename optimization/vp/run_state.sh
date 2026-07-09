@@ -9,6 +9,7 @@
 # Captures stdout+stderr to results/<state>/log.txt.
 
 set -euo pipefail
+export PYTHONIOENCODING=utf-8
 
 STATE_ARG="${1:-}"
 if [[ -z "$STATE_ARG" ]]; then
@@ -19,7 +20,11 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-VENV_PY="$REPO_DIR/.venv/bin/python"
+if [[ -x "$REPO_DIR/.venv/Scripts/python.exe" ]]; then
+    VENV_PY="$REPO_DIR/.venv/Scripts/python.exe"
+else
+    VENV_PY="$REPO_DIR/.venv/bin/python"
+fi
 MATLAB_BIN="${MATLAB_BIN:-/Applications/MATLAB_R2024b.app/bin/matlab}"
 
 if [[ "$STATE_ARG" == "pooled" ]]; then
@@ -29,7 +34,7 @@ else
 fi
 
 # Defer path resolution to config.py so TIDAL_VARIANT et al. take effect.
-RESULTS_DIR="$("$VENV_PY" -c "import sys; sys.path.insert(0, '$SCRIPT_DIR'); from config.config import get_results_dir; print(get_results_dir())")"
+RESULTS_DIR="$(cd "$SCRIPT_DIR" && "$VENV_PY" -c "import sys; sys.path.insert(0, '.'); from config.config import get_results_dir; print(get_results_dir())")"
 mkdir -p "$RESULTS_DIR"
 export TIDAL_RESULTS_DIR="$RESULTS_DIR"
 

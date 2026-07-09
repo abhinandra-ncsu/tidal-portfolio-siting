@@ -23,9 +23,29 @@ function cfg = config()
             cfg.AREA =  7.07; cfg.V_CUT_IN = 0.70; cfg.V_RATED = 2.32; cfg.P_RATED = 16800.0;
         case 'modvp2'
             cfg.AREA =  3.14; cfg.V_CUT_IN = 0.67; cfg.V_RATED = 2.22; cfg.P_RATED =  6500.0;
+        % Upward arm (D > 5) added 2026-06-10 — values mirror config.py;
+        % see experiments/paper_campaign/02_diameter_family/EXPERIMENT.md.
+        case 'modvp6'
+            cfg.AREA = 28.27; cfg.V_CUT_IN = 0.60; cfg.V_RATED = 1.99; cfg.P_RATED = 42300.0;
+        case 'modvp7'
+            cfg.AREA = 38.48; cfg.V_CUT_IN = 0.58; cfg.V_RATED = 1.94; cfg.P_RATED = 53300.0;
+        case 'modvp8'
+            cfg.AREA = 50.27; cfg.V_CUT_IN = 0.57; cfg.V_RATED = 1.89; cfg.P_RATED = 64400.0;
         otherwise
             error('config:UnknownVariant', ...
-                  'Unknown TIDAL_VARIANT=%s; expected one of gen5/modvp4/modvp3/modvp2', cfg.VARIANT);
+                  'Unknown TIDAL_VARIANT=%s; expected one of gen5/modvp4/modvp3/modvp2/modvp6/modvp7/modvp8', cfg.VARIANT);
+    end
+
+    % Rated / cut-in design sweep — experiments/rated_cutin_sweep/EXPERIMENT.md
+    % TIDAL_V_RATED / TIDAL_V_CUT_IN override the design speeds independently.
+    % When v_rated is set, P_RATED is recomputed from the cubic law so the
+    % rating tracks the sweep (rotor area held at the variant value).
+    vci = getenv('TIDAL_V_CUT_IN');
+    if ~isempty(vci); cfg.V_CUT_IN = str2double(vci); end
+    vr = getenv('TIDAL_V_RATED');
+    if ~isempty(vr)
+        cfg.V_RATED = str2double(vr);
+        cfg.P_RATED = 0.5 * cfg.RHO * cfg.AREA * cfg.CP * cfg.V_RATED^3;
     end
 
     % Tidal constituents — P1 (index 3) is all NaN in ROMS, skip it

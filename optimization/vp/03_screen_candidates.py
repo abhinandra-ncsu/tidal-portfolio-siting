@@ -19,7 +19,7 @@ from scipy.spatial import cKDTree
 
 from config.config import (
     CF_THRESHOLD, RHO, AREA, CP, P_RATED_W, V_CUT_IN, V_RATED,
-    get_results_dir,
+    get_results_dir, get_resource_dir, get_curve_dir,
 )
 
 # --- Paths ---
@@ -27,11 +27,16 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
 RESULTS_DIR = get_results_dir()
-HISTOGRAM_PATH = os.path.join(RESULTS_DIR, "histograms.nc")
+# histograms.nc is resource-only (identical for every power curve); read it from
+# the shared resource dir, which falls back to RESULTS_DIR when unset.
+HISTOGRAM_PATH = os.path.join(get_resource_dir(), "histograms.nc")
 SHORELINE_PATH = os.path.join(
     ROOT_DIR, "inputs", "geography", "NOAA_MedRes", "allus80k.shp",
 )
-OUTPUT_PATH = os.path.join(RESULTS_DIR, "candidates.nc")
+# candidates.nc is curve-level (shared across capacities within a power
+# curve); it lives in the shared curve dir, which falls back to RESULTS_DIR
+# when unset.
+OUTPUT_PATH = os.path.join(get_curve_dir(), "candidates.nc")
 
 R_EARTH_KM = 6371.0
 

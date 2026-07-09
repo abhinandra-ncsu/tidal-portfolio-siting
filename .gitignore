@@ -1,6 +1,7 @@
 # Drafts and ongoing experimental work — keep local
 experiments/
 writing/
+teaching/
 
 # Third-party tidal dataset (obtain separately, see README)
 inputs/roms/tide_data_east.dbf

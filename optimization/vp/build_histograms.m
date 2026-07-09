@@ -38,8 +38,16 @@ else
 end
 if ~exist(resultsDir, 'dir'), mkdir(resultsDir); end
 fprintf('Results dir: %s\n', resultsDir);
-inputFile  = fullfile(resultsDir, 'harmonics.nc');
-outputFile = fullfile(resultsDir, 'histograms.nc');
+
+% harmonics.nc / histograms.nc are resource-only (identical across every power
+% curve); they live in the shared resource dir when set, else in resultsDir
+% (single-dir runs).
+envResource = getenv('TIDAL_RESOURCE_DIR');
+if ~isempty(envResource), resourceDir = envResource; else, resourceDir = resultsDir; end
+if ~exist(resourceDir, 'dir'), mkdir(resourceDir); end
+
+inputFile  = fullfile(resourceDir, 'harmonics.nc');
+outputFile = fullfile(resourceDir, 'histograms.nc');
 
 if exist(outputFile, 'file')
     fprintf('Already exists: %s\nDelete to re-run.\n', outputFile);
@@ -104,7 +112,7 @@ fprintf('  Matched %d constituents to T_TIDE\n', n_con);
 
 %% Reconstruct speeds and build histograms (parallel)
 pool = gcp('nocreate');
-if isempty(pool), pool = parpool; end
+if isempty(pool), pool = parpool('Threads', 8); end
 fprintf('Using %d workers for %d points\n\n', pool.NumWorkers, n_pts);
 
 histograms  = zeros(n_pts, n_bins);

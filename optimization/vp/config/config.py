@@ -43,6 +43,18 @@ VARIANTS = {
                "p_turbine_kw": 16.8, "c_device":   640_500.0, "min_depth_m":  6.0},
     "modvp2": {"D": 2.0, "area":  3.14, "v_rated": 2.22, "v_cut_in": 0.67,
                "p_turbine_kw":  6.5, "c_device":   417_000.0, "min_depth_m":  4.0},
+    # Upward arm (D > 5) added 2026-06-10 for the paper campaign — see
+    # experiments/paper_campaign/02_diameter_family/EXPERIMENT.md. v_rated is
+    # p99.5 of per-site U_max on the variant's own eligible set (depth >= 2D),
+    # the same rule the gen5 baseline uses (the incremental shallow band is
+    # undefined for D > 5). C_device scales the three turbine-package lines
+    # from the Gen5 anchors (rotors D^2.7, IMA D^2.0, NPC D^2.0).
+    "modvp6": {"D": 6.0, "area": 28.27, "v_rated": 1.99, "v_cut_in": 0.60,
+               "p_turbine_kw": 42.3, "c_device": 1_953_000.0, "min_depth_m": 12.0},
+    "modvp7": {"D": 7.0, "area": 38.48, "v_rated": 1.94, "v_cut_in": 0.58,
+               "p_turbine_kw": 53.3, "c_device": 2_623_800.0, "min_depth_m": 14.0},
+    "modvp8": {"D": 8.0, "area": 50.27, "v_rated": 1.89, "v_cut_in": 0.57,
+               "p_turbine_kw": 64.4, "c_device": 3_420_400.0, "min_depth_m": 16.0},
 }
 
 _variant_env = os.environ.get("TIDAL_VARIANT", "").strip().lower()
@@ -50,6 +62,40 @@ VARIANT = _variant_env or "gen5"
 if VARIANT not in VARIANTS:
     raise ValueError(f"Unknown TIDAL_VARIANT={VARIANT!r}; expected one of {list(VARIANTS)}")
 _v = VARIANTS[VARIANT]
+
+
+# =========================================================================
+# Transmission step-up experiment — experiments/transmission_stepup/EXPERIMENT.md
+# Set TIDAL_STEPUP_KV to the step-up voltage in kV (e.g. 6.6) to enable.
+# =========================================================================
+_stepup_env = os.environ.get("TIDAL_STEPUP_KV", "").strip()
+STEPUP_KV = float(_stepup_env) if _stepup_env else None  # kV; None = 480 V baseline
+
+
+# =========================================================================
+# Max-energy objective experiment — experiments/max_energy_objective/EXPERIMENT.md
+# Set TIDAL_OBJECTIVE=energy to maximize delivered energy instead of
+# minimizing portfolio variance. Constraints are unchanged.
+# =========================================================================
+_objective_env = os.environ.get("TIDAL_OBJECTIVE", "").strip().lower()
+OBJECTIVE = _objective_env or "variance"
+if OBJECTIVE not in ("variance", "energy"):
+    raise ValueError(f"Unknown TIDAL_OBJECTIVE={OBJECTIVE!r}; expected 'variance' or 'energy'")
+
+
+def get_objective():
+    """Return the active optimizer objective ('variance' or 'energy')."""
+    return OBJECTIVE
+
+
+# =========================================================================
+# Rated / cut-in design sweep — experiments/rated_cutin_sweep/EXPERIMENT.md
+# TIDAL_V_RATED and TIDAL_V_CUT_IN override the variant's design speeds
+# independently. When v_rated is set, the rating is recomputed from the cubic
+# law P_rated = ½ρACp·v_rated³ (rotor geometry and per-device cost held).
+# =========================================================================
+_vr_env = os.environ.get("TIDAL_V_RATED", "").strip()
+_vci_env = os.environ.get("TIDAL_V_CUT_IN", "").strip()
 
 
 def _mw_label(mw):
@@ -64,8 +110,10 @@ def get_results_dir():
 
     Resolution order:
       1. TIDAL_RESULTS_DIR env var (absolute path), if set.
-      2. results/vp/turbine_modification/<variant>/{groups,states}/<scope>/<MW>mw/
-         when TIDAL_VARIANT is explicitly set (MW segment makes scale runs distinct).
+      2. results/vp/<experiment>/<variant>/{groups,states}/<scope>/<MW>mw/
+         when TIDAL_VARIANT is explicitly set (MW segment makes scale runs
+         distinct). <experiment> is max_energy when TIDAL_OBJECTIVE=energy,
+         transmission_stepup when step-up is active, else turbine_modification.
       3. results/vp/groups/<TIDAL_GROUP>/ if TIDAL_GROUP is set.
       4. results/vp/states/<single_state>/ if exactly one state is selected.
       5. results/vp/groups/pooled/ otherwise.
@@ -75,7 +123,13 @@ def get_results_dir():
         return override
     base = os.path.join(_ROOT_DIR, "results", "vp")
     if _variant_env:
-        base = os.path.join(base, "turbine_modification", VARIANT)
+        if OBJECTIVE == "energy":
+            exp_seg = "max_energy"
+        elif STEPUP_KV is not None:
+            exp_seg = "transmission_stepup"
+        else:
+            exp_seg = "turbine_modification"
+        base = os.path.join(base, exp_seg, VARIANT)
     if GROUP:
         scope_dir = os.path.join(base, "groups", GROUP)
     elif STATES and len(STATES) == 1:
@@ -86,18 +140,49 @@ def get_results_dir():
         scope_dir = os.path.join(scope_dir, _mw_label(P_TARGET_MW))
     return scope_dir
 
+
+def get_resource_dir():
+    """Directory holding resource-only inputs (harmonics.nc, histograms.nc),
+    which are identical across every power curve and capacity. Set via
+    TIDAL_RESOURCE_DIR; defaults to the results dir so single-directory runs
+    (turbine_modification, transmission_stepup) are unaffected."""
+    return os.environ.get("TIDAL_RESOURCE_DIR") or get_results_dir()
+
+
+def get_curve_dir():
+    """Directory holding the power-curve outputs the optimizer reads
+    (candidates.nc, covariance.nc), shared across capacities within a curve.
+    Set via TIDAL_CURVE_DIR; defaults to the results dir."""
+    return os.environ.get("TIDAL_CURVE_DIR") or get_results_dir()
+
+
 # =========================================================================
 # VP turbine — values resolved from VARIANTS[VARIANT] (see EXPERIMENT.md)
 # =========================================================================
 RHO = 1025.0                       # seawater density (kg/m^3)
 CP = 0.37                          # power coefficient (Lewis et al. 2021, held across family)
 AREA = _v["area"]                  # swept area (m^2)
-V_CUT_IN = _v["v_cut_in"]          # cut-in speed (m/s)
-V_RATED = _v["v_rated"]            # rated speed (m/s)
-P_TURBINE_KW = _v["p_turbine_kw"]  # rated power per turbine (kW)
+V_CUT_IN = float(_vci_env) if _vci_env else _v["v_cut_in"]  # cut-in speed (m/s)
+V_RATED = float(_vr_env) if _vr_env else _v["v_rated"]      # rated speed (m/s)
+# Rating tracks v_rated via the cubic law when swept; else use the variant value.
+if _vr_env:
+    P_TURBINE_KW = 0.5 * RHO * AREA * CP * V_RATED**3 / 1000.0  # ½ρACp·v_r³
+else:
+    P_TURBINE_KW = _v["p_turbine_kw"]  # rated power per turbine (kW)
 P_RATED_W = P_TURBINE_KW * 1000    # rated power per turbine (W)
 TURBINES_PER_TF = 3
 P_TRIFRAME_KW = P_TURBINE_KW * TURBINES_PER_TF
+
+# Step-up transformer cost — Collin 2017 Eq. 2, LV:MV Wet, Table A3.
+# Applied per-TriFrame to S = P_TF / PF (MVA). $0 when step-up is off, so this
+# term is a no-op for baseline (480 V) runs.
+# See experiments/transmission_stepup/EXPERIMENT.md for derivation.
+if STEPUP_KV is not None:
+    _S_mva = (P_TRIFRAME_KW / 0.95) / 1000.0
+    C_TRANSFORMER_PER_TF = 454_800.0 * _S_mva**0.6329 + 51_115.0
+else:
+    C_TRANSFORMER_PER_TF = 0.0
+
 
 # =========================================================================
 # Energy parameters (energy/methodology.md)
@@ -175,7 +260,7 @@ BBOX_BUFFER_DEG = 0.15   # buffer added to state bounding boxes (degrees)
 # =========================================================================
 P_TARGET_MW = float(os.environ.get("TIDAL_P_TARGET_MW", 5.25))  # target power (MW); TIDAL_P_TARGET_MW env var overrides
 _lcoe_env = os.environ.get("TIDAL_LCOE_TARGETS", "").strip()
-LCOE_TARGETS = [int(x) for x in _lcoe_env.split(",")] if _lcoe_env else [800, 1200, 2000]  # $/MWh; TIDAL_LCOE_TARGETS env var overrides (comma-separated)
+LCOE_TARGETS = [float(x) for x in _lcoe_env.split(",")] if _lcoe_env else [800, 1200, 2000]  # $/MWh; TIDAL_LCOE_TARGETS env var overrides (comma-separated). float so fractional-dollar frontier sweeps work.
 
 # =========================================================================
 # Solver settings

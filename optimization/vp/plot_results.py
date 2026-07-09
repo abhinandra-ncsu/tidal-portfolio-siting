@@ -3,8 +3,10 @@ Visualize portfolio optimization results.
 
 Produces four plot types:
   1. Spatial site maps — one per LCOE target
-  2. LCOE vs Variance Pareto plot
-  3. Correlation heatmaps of selected sites
+  2. LCOE tradeoff plot — vs portfolio variance (min-variance objective) or
+     vs portfolio annual energy (max-energy objective)
+  3. Correlation heatmaps of selected sites (min-variance objective only —
+     the max-energy objective never looks at the covariance structure)
   4. Cost breakdown bar chart
 
 Input:  ../results/optimization_results.nc
@@ -22,14 +24,16 @@ import xarray as xr
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 
-from config.config import get_results_dir
+from config.config import get_results_dir, get_curve_dir, get_objective
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
 RESULTS_DIR = get_results_dir()
 RESULTS_PATH = os.path.join(RESULTS_DIR, "optimization_results.nc")
-COVARIANCE_PATH = os.path.join(RESULTS_DIR, "covariance.nc")
+# covariance.nc is curve-level; read it from the shared curve dir, which
+# falls back to RESULTS_DIR when unset.
+COVARIANCE_PATH = os.path.join(get_curve_dir(), "covariance.nc")
 SHORELINE_PATH = os.path.join(ROOT_DIR, "inputs", "geography", "NOAA_MedRes", "allus80k.shp")
 FIG_DIR = os.path.join(RESULTS_DIR, "figures")
 
@@ -108,31 +112,56 @@ def plot_spatial_maps(res, shoreline):
 # =========================================================================
 
 def plot_pareto(res):
-    """Achieved LCOE vs portfolio variance tradeoff curve."""
+    """Achieved LCOE vs the objective-relevant portfolio outcome.
+
+    Min-variance objective: y is portfolio variance (the quantity minimized).
+    Max-energy objective: y is portfolio annual energy (the quantity
+    maximized) — variance is irrelevant to what the budget bought here.
+    """
     target_idx, target_lcoe = get_optimal_targets(res)
     if len(target_idx) == 0:
         print("  Skipped: no optimal solutions")
         return
-    variance = res["variance"].values[target_idx]
     achieved = res["achieved_lcoe"].values[target_idx]
+
+    if get_objective() == "energy":
+        # Portfolio annual energy = sum of delivered-to-shore energy over the
+        # selected sites (same field the LCOE constraint and cost breakdown use).
+        energy_all = res["energy_mwh"].values
+        y = np.array([energy_all[res["selected"].values[t].astype(bool)].sum()
+                      for t in target_idx])
+        ylabel = "Portfolio Annual Energy (MWh/yr)"
+        title = "Achieved LCOE vs Portfolio Energy"
+        fname = "lcoe_vs_energy.png"
+        sci_y = False
+    else:
+        y = res["variance"].values[target_idx]
+        ylabel = "Portfolio Variance (W²)"
+        title = "Cost–Variance Tradeoff"
+        fname = "lcoe_vs_variance.png"
+        sci_y = True
 
     fig, ax = plt.subplots(figsize=(8, 5))
 
-    ax.plot(achieved, variance, "o--", color="steelblue", markersize=8,
+    ax.plot(achieved, y, "o--", color="steelblue", markersize=8,
             markeredgecolor="black", markeredgewidth=0.5, linewidth=1.5)
 
-    for i, L in enumerate(target_lcoe):
-        ax.annotate(f"${L:,.0f}", (achieved[i], variance[i]),
-                    textcoords="offset points", xytext=(8, 5), fontsize=9)
+    # Per-point budget labels are readable for the coarse grid but turn to mush
+    # on a fine frontier sweep — annotate only when the cells are few.
+    if len(target_lcoe) <= 12:
+        for i, L in enumerate(target_lcoe):
+            ax.annotate(f"${L:,.0f}", (achieved[i], y[i]),
+                        textcoords="offset points", xytext=(8, 5), fontsize=9)
 
     ax.set_xlabel("Achieved LCOE ($/MWh)", fontsize=12)
-    ax.set_ylabel("Portfolio Variance (W²)", fontsize=12)
-    ax.set_title("Cost–Variance Tradeoff", fontsize=13, fontweight="bold")
-    ax.ticklabel_format(axis="y", style="scientific", scilimits=(0, 0))
+    ax.set_ylabel(ylabel, fontsize=12)
+    ax.set_title(title, fontsize=13, fontweight="bold")
+    if sci_y:
+        ax.ticklabel_format(axis="y", style="scientific", scilimits=(0, 0))
     ax.grid(True, alpha=0.3)
 
     fig.tight_layout()
-    path = os.path.join(FIG_DIR, "lcoe_vs_variance.png")
+    path = os.path.join(FIG_DIR, fname)
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {path}")
@@ -143,43 +172,49 @@ def plot_pareto(res):
 # =========================================================================
 
 def plot_correlation_heatmaps(res, Sigma):
-    """Correlation matrices for selected sites at tight and loose LCOE targets."""
-    target_idx, target_lcoe = get_optimal_targets(res)
-    if len(target_idx) == 0:
-        print("  Skipped: no optimal solutions")
-        return
+    """Correlation matrices for selected sites at every LCOE target (2x5 grid)."""
+    all_lcoe = res["lcoe_target"].values
+    all_status = res["status"].values
+    n = len(all_lcoe)
 
-    # Pick tightest and loosest targets
-    picks = [0, len(target_idx) - 1]
-    if len(target_idx) > 2:
-        picks = [0, len(target_idx) // 2, len(target_idx) - 1]
+    ncols = 5
+    nrows = int(np.ceil(n / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3 * ncols + 1, 3.2 * nrows + 0.5))
+    axes = np.atleast_2d(axes).ravel()
 
-    fig, axes = plt.subplots(1, len(picks), figsize=(6 * len(picks) + 1, 5))
-    if len(picks) == 1:
-        axes = [axes]
-
-    # Convert covariance to correlation
     std = np.sqrt(np.diag(Sigma))
     std[std == 0] = 1.0
     corr_full = Sigma / np.outer(std, std)
 
-    for k, pidx in enumerate(picks):
-        tidx = target_idx[pidx]
-        L = target_lcoe[pidx]
+    im = None
+    for tidx in range(n):
+        ax = axes[tidx]
+        L = all_lcoe[tidx]
+        if all_status[tidx] != "optimal":
+            ax.text(0.5, 0.5, "No optimal\nsolution",
+                    ha="center", va="center", transform=ax.transAxes,
+                    fontsize=10, color="0.4")
+            ax.set_title(f"LCOE = ${L:,.0f}/MWh", fontsize=10)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            continue
+
         sel = res["selected"].values[tidx].astype(bool)
         sel_indices = np.where(sel)[0]
-
         corr_sel = corr_full[np.ix_(sel_indices, sel_indices)]
+        im = ax.imshow(corr_sel, cmap="RdBu_r", vmin=-1, vmax=1, aspect="equal")
+        ax.set_title(f"LCOE = ${L:,.0f}/MWh\n(n={sel.sum()} sites)", fontsize=10)
+        ax.set_xlabel("Site index", fontsize=8)
+        ax.set_ylabel("Site index", fontsize=8)
 
-        im = axes[k].imshow(corr_sel, cmap="RdBu_r", vmin=-1, vmax=1, aspect="equal")
-        axes[k].set_title(f"LCOE = ${L:,.0f}/MWh\n(n={sel.sum()} sites)", fontsize=11)
-        axes[k].set_xlabel("Site index")
-        axes[k].set_ylabel("Site index")
+    for tidx in range(n, len(axes)):
+        axes[tidx].axis("off")
 
-    fig.subplots_adjust(right=0.88)
-    cbar_ax = fig.add_axes([0.90, 0.15, 0.02, 0.7])
-    cbar = fig.colorbar(im, cax=cbar_ax)
-    cbar.set_label("Pearson Correlation")
+    fig.subplots_adjust(right=0.90)
+    if im is not None:
+        cbar_ax = fig.add_axes([0.92, 0.15, 0.015, 0.7])
+        cbar = fig.colorbar(im, cax=cbar_ax)
+        cbar.set_label("Pearson Correlation")
 
     fig.suptitle("Power Output Correlation — Selected Sites",
                  fontsize=13, fontweight="bold")
@@ -260,14 +295,24 @@ def main():
     print(f"  {len(target_lcoe)} optimal solutions: "
           + ", ".join(f"${L:,.0f}" for L in target_lcoe))
 
-    print("\nPlot 1: Spatial site maps...")
-    plot_spatial_maps(res, shoreline)
+    # Spatial maps redraw the shoreline once per LCOE target — minutes of dead
+    # time on a fine frontier sweep (dozens of targets). TIDAL_SKIP_SPATIAL=1
+    # skips them; the frontier curve doesn't need per-target site maps.
+    if os.environ.get("TIDAL_SKIP_SPATIAL", "").strip():
+        print("\nPlot 1: Spatial site maps... skipped (TIDAL_SKIP_SPATIAL)")
+    else:
+        print("\nPlot 1: Spatial site maps...")
+        plot_spatial_maps(res, shoreline)
 
-    print("Plot 2: LCOE vs Variance...")
+    print("Plot 2: LCOE tradeoff...")
     plot_pareto(res)
 
-    print("Plot 3: Correlation heatmaps...")
-    plot_correlation_heatmaps(res, Sigma)
+    if get_objective() == "energy":
+        print("Plot 3: Correlation heatmaps... skipped (max-energy objective "
+              "ignores covariance)")
+    else:
+        print("Plot 3: Correlation heatmaps...")
+        plot_correlation_heatmaps(res, Sigma)
 
     print("Plot 4: Cost breakdown...")
     plot_cost_breakdown(res)

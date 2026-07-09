@@ -19,7 +19,10 @@ import pandas as pd
 import xarray as xr
 from dbfread import DBF
 
-from config.config import MIN_DEPTH_M, BBOX_BUFFER_DEG, STATES, GROUP, get_results_dir
+from config.config import (
+    MIN_DEPTH_M, BBOX_BUFFER_DEG, STATES, GROUP,
+    get_results_dir, get_resource_dir,
+)
 
 # --- Paths ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -29,7 +32,9 @@ DBF_PATH = os.path.join(ROOT_DIR, "inputs", "roms", "tide_data_east.dbf")
 BOUNDARIES_CSV = os.path.join(SCRIPT_DIR, "config", "east_coast_state_boundaries.csv")
 
 RESULTS_DIR = get_results_dir()
-OUTPUT_PATH = os.path.join(RESULTS_DIR, "harmonics.nc")
+# harmonics.nc is resource-only (identical for every power curve); it lives in
+# the shared resource dir, which falls back to RESULTS_DIR when unset.
+OUTPUT_PATH = os.path.join(get_resource_dir(), "harmonics.nc")
 
 # --- Parameters ---
 CONSTITUENTS = ["q1", "o1", "p1", "k1", "n2", "m2", "s2", "k2", "m4", "m6"]
