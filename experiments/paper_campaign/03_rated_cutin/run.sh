@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Campaign 03 — rated x cut-in design sweep: gen5 geometry, pooled, 6.6 kV.
-# Adapted from experiments/rated_cutin_sweep/run_sweep.sh (NE+NY original);
+# Adapted from experiments/archive/rated_cutin_sweep/run_sweep.sh (NE+NY original);
 # this campaign version runs at pooled scope and reads the resource tier from
 # ../01_baseline/results (same variant, same scope -> identical steps 1-2).
 #   steps 1-2 (harmonics, histograms)  -> copied once from 01_baseline

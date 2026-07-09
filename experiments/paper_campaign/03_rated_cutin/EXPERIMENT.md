@@ -18,7 +18,7 @@ curves, reference curve first. P_rated tracks v_rated by the cubic law (rotor
 geometry and per-device cost held); fleet size N follows from each capacity
 target.
 
-This re-runs the design of `experiments/rated_cutin_sweep/` (NE+NY,
+This re-runs the design of `experiments/archive/rated_cutin_sweep/` (NE+NY,
 2026-05-31) at the campaign's pooled scope and as part of the single
 campaign configuration.
 
