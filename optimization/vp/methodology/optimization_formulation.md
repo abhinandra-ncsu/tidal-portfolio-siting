@@ -4,7 +4,7 @@
 
 Given a set of candidate tidal energy sites along the US East Coast, select where to deploy a fixed number of Verdant Power Gen5 TriFrame units to minimize the temporal variability of aggregate power generation, subject to a portfolio-level LCOE ceiling.
 
-Each TriFrame is deployed at a single ROMS mesh point and cables directly to shore — no offshore collection points or voltage step-up. See `turbine_design_specification.md` for TriFrame parameters and `cost/capex/electrical/methodology.md` for cable design.
+Each TriFrame is deployed at a single ROMS mesh point and transmits to shore on its own radial cable via a per-TriFrame step-up to 6.6 kV — no offshore collection points or shared export cable. See `turbine_design_specification.md` for TriFrame parameters and `cost/capex/electrical/methodology.md` for the step-up and cable design.
 
 ---
 
@@ -53,13 +53,14 @@ where:
 N = ceil(P_target / P_TriFrame)
 ```
 
-P_TriFrame = 105 kW (see `turbine_design_specification.md`).
+P_TriFrame = 93.6 kW (see `turbine_design_specification.md`).
 
 | P_target | N (TriFrames) |
 |----------|---------------|
-| 1 MW     | 10            |
-| 10 MW    | 96            |
-| 100 MW   | 953           |
+| 1 MW     | 11            |
+| 5 MW     | 54            |
+| 25 MW    | 268           |
+| 100 MW   | 1069          |
 
 ### 2. Portfolio LCOE Ceiling
 

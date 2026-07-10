@@ -23,15 +23,14 @@ Source: VP MHKDR 318 (2020). See `device/source_data.md` for verification agains
 
 ## 2. Electrical Infrastructure (C_elec)
 
-Submarine cable from each TriFrame to shore. 480V AC, direct, no transformers. Per-site cost depends on distance: cheapest ABB cable (70–500 mm² copper) that keeps transmission loss ≤ 10%.
+Each TriFrame steps its 480 V generation up to 6.6 kV at the seabed, then transmits to shore on its own radial submarine cable (no offshore collection points). Two parts:
 
-Cost: Nakhai (2023) Eq. 3. Specs: ABB XLPE Rev 5, Table 41.
+- **Cable (per-site).** Cheapest ABB cable (70–500 mm² copper, 10 kV three-core) that keeps transmission loss ≤ 10%; cost scales with shore distance. Cost: Nakhai (2023) Eq. 3; specs ABB XLPE Rev 5, Table 41. This is the only per-site CapEx component.
+- **Step-up transformer (per-TriFrame).** Wet/subsea unit sized to S = P_TF / PF = 0.0985 MVA; Collin (2017) LV:MV Wet → ≈ $156,000/TriFrame. Site-independent, so it enters constant CapEx, not the per-site term. Zero in the 480 V comparison arm.
 
 Transmission loss reduces delivered AEP: `AEP_delivered = AEP_generated × (1 - loss)`.
 
-This is the only per-site cost component. Cable installation is portfolio-dependent (see `optimization_cost_structure.md` for the full categorization).
-
-See `electrical/source_data.md`.
+Cable installation is portfolio-dependent (see `optimization_cost_structure.md` for the full categorization). See `electrical/methodology.md` and `electrical/source_data.md`.
 
 ## 3. Installation (C_inst)
 
@@ -89,12 +88,14 @@ C_subsys       = 0.10 × C_device_total
 C_contin       = 0.10 × (C_device_total + C_subsys + C_inst)
 C_EC           = 0.05 × (C_device_total + C_subsys + C_contin)
 C_elec         = Σ cable_cost_i  for selected sites
+C_xfmr         = N × $156,000                    (6.6 kV step-up; $0 in the 480 V arm; no contingency/EC cascade)
 
-CapEx = C_device_total + C_elec + C_inst + C_subsys + C_contin + C_EC
+CapEx = C_device_total + C_elec + C_inst + C_subsys + C_contin + C_EC + C_xfmr
 ```
 
 ## References
 
+- Collin, A.J. et al. (2017). Component-level cost models for offshore tidal-stream arrays. *Energies*, 10(12), 1973.
 - Hassan, M. et al. (2024). Technoeconomic optimization of coaxial hydrokinetic turbines. *Renewable Energy*, 239, 122041.
 - Mattia, P. (2025). Techno-Economic Modelling and Comparative Analysis of HATEC. Master's thesis, Politecnico di Torino.
 - Neary, V.S. et al. (2014). Methodology for Design and Economic Analysis of MEC Technologies. SAND2014-9040.
