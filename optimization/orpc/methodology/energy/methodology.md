@@ -51,7 +51,7 @@ Sandia's SAND2014-9040 AEP formula assumes P(u) is a *rotor* (mechanical) power 
 
 ## Transmission Loss (1 − loss_i)
 
-Site-dependent. The smallest-CSA cable that keeps loss ≤ 10% is selected per site, with fallback to the largest catalog size (1000 mm²) if none meet the threshold. The DC monopolar loss formula reduces to `% loss = R(Ω/km) · L(km)` for ORPC's I = 500 A, P = 500 kW (see `cost/capex/electrical/methodology.md`). The resulting fractional loss enters the energy formula as `(1 − loss_i)`.
+Site-dependent. The smallest-CSA cable that keeps loss ≤ 10% is selected per site, with fallback to the largest catalog size (500 mm²) if none meet the threshold. With the per-device 480 V → 6.6 kV step-up (see `cost/capex/electrical/methodology.md`), the 3-phase loss `% loss = 3·I²·R·L/P = 1.272·R·L` (I = 46.0 A, P = 500 kW) stays ≤ 1.6% on the 70 mm² floor cable across the device's entire ≤5 km envelope. The resulting fractional loss enters the energy formula as `(1 − loss_i)`.
 
 ## References
 

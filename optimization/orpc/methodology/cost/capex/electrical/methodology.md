@@ -2,58 +2,90 @@
 
 ## Electrical Design Basis
 
-Device electrical parameters are taken from `../../turbine_design_specification.md`:
+| Parameter | Value | Source |
+|---|---|---|
+| Rated power per device | 500 kW | `../../turbine_design_specification.md` |
+| Generation voltage | 480 V AC, 3-phase | Modeled (this study); NREL/TP-5D00-66097 conversion model + the 277/480 VAC grid node in Tech Report Table 7 |
+| Transmission voltage | 6.6 kV (per-device step-up) | Adopted to match VP — see Configuration |
+| Power factor | 0.95 | DNV GL 2015; Nakhai 2023 Table 1 (as VP) |
+| Transmission current | 46.0 A | I = P / (√3 · V · PF) = 500,000 / (1.732 · 6600 · 0.95) |
 
-| Parameter | Value |
-|---|---|
-| Per-device rated power | 500 kW |
-| Subsea transmission voltage | 1000 VDC |
-| Number of conductors | 2 (DC monopolar: positive + negative) |
-| Rated DC current | 500 A (= P / V) |
+**Why not 1000 VDC.** Tech Report Table 7 lists "Subsea Power Transmission: 1000 VDC," but it
+sits in a scenario-flavored "Power Output" block — its neighbor is "200 kW to grid, assuming
+2 km transmission" — calibrated to ORPC's Admiralty-Inlet reference deployment. ORPC's own
+power-conversion modeling (NREL/TP-5D00-66097; NREL/CP-5D00-66866) describes variable-frequency
+AC with power-electronic conversion, not a portable fixed DC link. We therefore drop 1000 VDC as
+a device constant and, mirroring the VP methodology, model a per-device 480 V → 6.6 kV step-up
+with AC transmission.
 
-The transmission voltage is fixed by the device hardware: ORPC's onboard PCC rectifies the
-variable-frequency AC from the permanent magnet generator to 1000 VDC. We treat voltage as a
-device-spec input, not a free parameter to be optimized via Nakhai's voltage-selection logic.
+## Configuration: Per-Device Step-Up to 6.6 kV
 
-## Configuration: Single Device Per Site, Direct Cable to Shore
+Each ORPC TidGen 2.0 steps its 480 V generation up to 6.6 kV at the seabed, then transmits to
+shore on its own radial 3-core AC cable — no shared export cable, one step-up per device — exactly
+as VP. This replaces the retired 1000 VDC / DC-monopolar architecture.
 
-Each ORPC TidGen 2.0 deployed at a candidate site has its own subsea cable directly to shore,
-carrying 1000 VDC. An onshore inverter station at each site converts DC to grid AC.
+**Why step up.** At 480 V the per-device current is 633 A, and conductor loss is 3·I²·R·L, so the
+10% loss cap forces large, expensive cross-sections and caps usable range near ~1 km. Stepping to
+6.6 kV cuts the current to 46 A and the I²R loss ~189×; the cable then sits at the catalog-minimum
+70 mm² across the device's entire ≤5 km envelope (≤1.6% loss at 5 km).
 
-## Cable Selection Logic
+**Why the voltage level is fixed, not optimized.** For this device the choice of transmission
+voltage is degenerate. The step-up transformer cost (Collin Eq. 2) depends only on rating, not
+voltage; the cable cost depends only on cross-section; and at 500 kW over ≤5 km every standard MV
+level (3.3–33 kV) drops the current far enough that the loss-limited cross-section falls below the
+70 mm² catalog floor. Total electrical cost is therefore identical across all MV levels — the model
+cannot distinguish them. Neither Nakhai's CSA-only cable cost nor Collin's rating-only transformer
+cost carries a voltage-increasing term (the insulation/switchgear premiums that would, in reality,
+create an interior optimum). Absent that term, any MV level yields the same LCOE; we adopt 6.6 kV
+to match VP.
 
-For each site, select the smallest CSA in Nakhai's dataset where transmission loss ≤ 10%.
-If no CSA meets the threshold, use the largest (1000 mm²). Cable cost from Nakhai (2023) Eq. 3:
+**Step-up transformer cost** (Collin et al. 2017 Eq. 2, LV:MV Wet — the same coefficients as VP):
 
-    $/m_total = 0.3476 × CSA × 2                  (DC, 2 conductors)
-    C_cable_ORPC(L_shore) = $/m_total × L_shore × 1000     ($, L in km)
+```
+C_transformer = 454,800 × S^0.6329 + 51,115     (S = rating in MVA)
+S = P / PF = 0.500 / 0.95 = 0.526 MVA
+C_transformer ≈ $354,000 per device
+```
 
-The selection table by shore distance is in `source_data.md`. Two constraints bind: ampacity
-sets a floor of 150 mm² (ABB Table 35 wide-spacing rating: 520 A at 150 mm², covering ORPC's
-500 A); loss takes over beyond 0.87 km, walking up the catalog as distance grows.
+The transformer is site-independent — one per device regardless of location — so it enters
+constant CapEx as raw CapEx (FCR annualization applies; the contingency and environmental-compliance
+cascade does not), the same treatment VP gives it. See `../optimization_cost_structure.md`.
+
+## Cable Selection
+
+For each site, select the cheapest ABB 3-core 10 kV XLPE cable (70–500 mm² copper; the 10 kV,
+Um = 12 kV rating comfortably covers 6.6 kV) where transmission loss ≤ 10%. Cable cost from
+Nakhai (2023) Eq. 3. At 6.6 kV every site within the ≤5 km device envelope selects the 70 mm²
+floor cable ($97/m); the loss cap never binds. Selection details in `source_data.md`.
 
 ## How Transmission Loss Affects AEP
 
-    AEP_delivered = AEP_generated × (1 − transmission_loss)
+```
+AEP_delivered = AEP_generated × (1 − transmission_loss)
+```
 
-The transmission loss varies per site, set by the cable CSA chosen for that distance.
+Per-site and distance-dependent, but ≤1.6% everywhere within 5 km at 6.6 kV.
 
-## Onshore Inverter Station
+## Comparison Arm (480 V, no step-up)
 
-Each site requires a DC→AC inverter station to deliver power to the grid (ORPC's PCC outputs
-1000 VDC; the grid is AC). Cost: **$102,500 per site**, taken from CBS-A30 1.2.3.4.5 (Onshore
-Substations, single-device value). ORPC does not publish a methodology for this figure, and we
-have not independently validated it for a 500 kW DC→AC inverter station.
+At 480 V the per-device current is 633 A — ampacity forces large cables even at zero distance, and
+the 10% loss cap is exceeded past ~1 km even on the 500 mm² cross-section. We model this as a
+comparison arm (transformer cost = $0). It does not scale past pilot deployments, the same
+conclusion VP reaches for its 480 V arm — only sharper here, because ORPC's per-device power is
+~5× VP's per-TriFrame power.
 
-## Total Electrical Infrastructure Cost
+## Onshore
 
-    C_elec_ORPC(site) = C_cable_ORPC(L_shore) + 102,500     ($)
-
-with `C_cable_ORPC(L_shore)` from the cable selection table.
+No separate onshore substation line. The DC→AC inverter station ($102,500/site in the retired DC
+model) is removed — it existed only because transmission was DC. With AC transmission the device's
+onboard inverter already delivers 60 Hz AC, so the onshore side reduces to step-down/interconnection,
+matching VP's treatment (VP carries no explicit onshore substation cost).
 
 ## References
 
-- ABB. *XLPE Submarine Cable Systems: Attachment to XLPE Land Cable Systems – User's Guide*. Rev 5. Table 35.
-- Nakhai, A.Y. (2023). *Electrical Infrastructure Cost Model for Marine Energy Systems*. NREL/TP-5700-87184.
-- Collin, A.J. et al. (2017). "Electrical Components for Marine Renewable Energy Arrays: A Techno-Economic Review." *Energies* 10(12): 1973.
+- Collin, A.J. et al. (2017). "Electrical Components for Marine Renewable Energy Arrays: A Techno-Economic Review." *Energies* 10(12): 1973. Eq. 2 (LV:MV Wet transformer).
+- Nakhai, A.Y. (2023). *Electrical Infrastructure Cost Model for Marine Energy Systems*. NREL/TP-5700-87184. Eq. 3.
+- ABB. *XLPE Submarine Cable Systems: Attachment to XLPE Land Cable Systems – User's Guide*. Rev 5. Table 41 (three-core, 10 kV).
+- Muljadi, E., Wright, A., Gevorgian, V., Donegan, J., Marnagh, C., & McEntee, J. (2016). *Power Generation for River and Tidal Generators*. NREL/TP-5D00-66097. https://www.osti.gov/biblio/1259805
+- Muljadi, E., Gevorgian, V., Wright, A., Donegan, J., Marnagh, C., & McEntee, J. (2016). *Electrical Power Conversion of a River and Tidal Power Generator*. NREL/CP-5D00-66866, IEEE NAPS 2016.
 - Device parameter primary citations: see `../../turbine_design_specification.md`.

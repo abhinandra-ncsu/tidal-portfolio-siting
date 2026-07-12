@@ -36,7 +36,9 @@ from config.config import (
     # Energy
     HOURS_PER_YEAR, ETA_AVAIL,
     # Electrical
-    MAX_LOSS, CABLES, ONSHORE_INVERTER_COST,
+    MAX_LOSS, CABLES, PF,
+    # Transmission step-up (cost/capex/electrical/methodology.md)
+    STEPUP_KV, C_TRANSFORMER_PER_DEVICE,
     # Cost — device
     C_DEVICE_UNIT1, LEARNING_EXP,
     # Cost — installation (ORPC: 3-phase tug + multicat + per-meter cable)
@@ -65,10 +67,13 @@ CANDIDATES_PATH = os.path.join(RESULTS_DIR, "candidates.nc")
 COVARIANCE_PATH = os.path.join(RESULTS_DIR, "covariance.nc")
 RESULTS_PATH = os.path.join(RESULTS_DIR, "optimization_results.nc")
 
-# DC monopolar loss: 2 * I^2 * R * L / P
-# I = 500 A, P = 500 kW => coefficient = 2*500^2/500_000 = 1.0
-# So % loss = R(Ω/km) * L(km), matching electrical/source_data.md table.
-LOSS_COEFF = 1.0
+# Loss formula: 3 * I^2 * R * L / P, with I = P_device / (sqrt(3) * V * PF).
+# Generation is 480 V; the baseline steps up to STEPUP_KV (6.6 kV) before
+# transmission, cutting the current ~13.75x (electrical/methodology.md).
+# At 6.6 kV: I = 46.0 A, LOSS_COEFF ≈ 0.0127 (=> ~1.272% * R * L).
+_V_TX_VOLTS = (STEPUP_KV * 1000.0) if STEPUP_KV is not None else 480.0
+_I_AMPS = (P_DEVICE_KW * 1000.0) / (np.sqrt(3.0) * _V_TX_VOLTS * PF)
+LOSS_COEFF = 3.0 * _I_AMPS**2 / (P_DEVICE_KW * 1000.0)
 
 
 # =========================================================================
@@ -113,11 +118,11 @@ def compute_c_const(N):
     Annualized project-level constant cost C_const(N) for ORPC.
 
     Includes: device manufacturing (learning curve), tow + moor installation
-    (tug + multicat), per-device mooring materials, subsystem integration,
-    constant portions of contingency/compliance, and bundled OpEx. Cable
-    installation is fully portfolio-dependent (Mattia per-meter bundled
-    metric); ORPC's $160,422/device OpEx already bundles insurance, so
-    INSURE_FRAC is 0.
+    (tug + multicat), per-device mooring materials, the per-device step-up
+    transformer, subsystem integration, constant portions of
+    contingency/compliance, and bundled OpEx. Cable installation is fully
+    portfolio-dependent (Mattia per-meter bundled metric); ORPC's
+    $160,422/device OpEx already bundles insurance, so INSURE_FRAC is 0.
     """
     # Device manufacturing with learning curve
     units = np.arange(1, N + 1, dtype=np.float64)
@@ -145,9 +150,14 @@ def compute_c_const(N):
     # Environmental compliance (constant portion)
     c_ec_const = EC_FRAC * (c_device_total + c_subsys + c_contin_const)
 
+    # Step-up transformer (zero for the 480 V comparison arm). Site-independent,
+    # one per device; added as raw CapEx (FCR applies; the contingency/EC
+    # cascade does not), the same treatment VP gives it.
+    c_transformer = N * C_TRANSFORMER_PER_DEVICE
+
     # Total constant CapEx
     capex_const = (c_device_total + c_inst_const + c_subsys
-                   + c_contin_const + c_ec_const)
+                   + c_contin_const + c_ec_const + c_transformer)
 
     # Annualized constant cost
     annual_capex = FCR * capex_const
@@ -162,9 +172,10 @@ def compute_c_site(cable_cost_total, laying_cost):
     """
     Annualized portfolio-dependent cost for a single ORPC site.
 
-    Includes cable purchase, cable laying, onshore DC->AC inverter,
-    and cascading percentages (contingency, compliance) applied to
-    laying only — same cascade pattern as the VP pipeline.
+    Includes cable purchase, cable laying, and cascading percentages
+    (contingency, compliance) applied to laying only — same cascade
+    pattern as the VP pipeline. No onshore inverter: it was retired with
+    the DC architecture (electrical/methodology.md).
     """
     # Contingency on laying
     contin_pd = CONTIN_FRAC * laying_cost
@@ -173,8 +184,7 @@ def compute_c_site(cable_cost_total, laying_cost):
     ec_pd = EC_FRAC * contin_pd
 
     # Total portfolio-dependent CapEx for this site
-    capex_pd = (cable_cost_total + ONSHORE_INVERTER_COST + laying_cost
-                + contin_pd + ec_pd)
+    capex_pd = cable_cost_total + laying_cost + contin_pd + ec_pd
 
     # Annualized: FCR * CapEx + insurance (0 for ORPC, bundled in OpEx)
     c_site = FCR * capex_pd + INSURE_FRAC * capex_pd
@@ -260,7 +270,8 @@ def main():
     # -----------------------------------------------------------------
     # Cable selection and losses per site
     # -----------------------------------------------------------------
-    print("\nSelecting cables (DC monopolar loss: R * L)...")
+    _tx_label = f"{STEPUP_KV} kV step-up" if STEPUP_KV is not None else "480 V (no step-up)"
+    print(f"\nSelecting cables (3-phase AC, {_tx_label}; loss = {LOSS_COEFF:.4f} * R * L)...")
     cable_csa = np.zeros(n_sites, dtype=np.int32)
     cable_cost_total = np.zeros(n_sites)
     cable_loss = np.zeros(n_sites)
@@ -458,7 +469,10 @@ def main():
             "P_target_MW": P_TARGET_MW,
             "N_devices": N,
             "C_const": c_const,
-            "loss_formula": "R * L  (DC monopolar, I=500 A, P=500 kW)",
+            "loss_formula": f"{LOSS_COEFF:.4f} * R * L  (3-phase AC, "
+                            f"V_tx={_V_TX_VOLTS:.0f} V, I={_I_AMPS:.1f} A, P=500 kW)",
+            "stepup_kv": STEPUP_KV if STEPUP_KV is not None else 0.0,
+            "transformer_cost_per_device": C_TRANSFORMER_PER_DEVICE,
             "solver": "Gurobi via gurobipy",
             "created": datetime.now(timezone.utc).isoformat(),
         },

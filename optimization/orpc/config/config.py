@@ -103,28 +103,48 @@ HOURS_PER_YEAR = 8766     # Julian year (365.25 * 24)
 ETA_AVAIL = 0.92          # operational availability (LCOE Metrics C24)
 
 # =========================================================================
-# Electrical parameters (cost/capex/electrical/source_data.md)
+# Electrical parameters (cost/capex/electrical/{methodology,source_data}.md)
 # =========================================================================
 MAX_LOSS = 0.10           # maximum acceptable cable loss (10%)
+PF = 0.95                 # power factor (DNV GL 2015; Nakhai 2023 Table 1)
 
-# DC monopolar cable table: (CSA mm^2, R ohm/km, cost $/m).
-# 150 mm^2 ampacity floor for ORPC's 500 A — cables below 150 mm^2 cannot
-# carry rated current and are excluded.
-# Cost per Nakhai (2023) Eq. 3, 2-conductor DC: $/m = 0.3476 * CSA * 2.
-# Resistance per copper resistivity ρ = 1.724e-8 Ω·m: R = 17.24 / CSA Ω/km.
+# Transmission step-up. The ORPC baseline mirrors VP: each device steps its
+# 480 V generation up to 6.6 kV at the seabed before transmitting on its own
+# radial 3-core AC cable (electrical/methodology.md). STEPUP_KV is the step-up
+# voltage in kV; set TIDAL_STEPUP_KV=0 (or none/off) to model the 480 V
+# comparison arm (no step-up, transformer cost = $0).
+_stepup_env = os.environ.get("TIDAL_STEPUP_KV", "").strip().lower()
+if _stepup_env in ("0", "none", "off"):
+    STEPUP_KV = None                       # 480 V comparison arm
+elif _stepup_env:
+    STEPUP_KV = float(_stepup_env)
+else:
+    STEPUP_KV = 6.6                        # baseline: 480 V -> 6.6 kV step-up
+
+# 3-core AC cable table: (CSA mm^2, R ohm/km, cost $/m). Same catalog as VP
+# (ABB Rev 5 Table 41, 10 kV three-core; the 10 kV class covers 6.6 kV).
+# Cost per Nakhai (2023) Eq. 3, 3-phase AC (4 conductors): $/m = 4 * 0.3476 * CSA.
+# Resistance from copper resistivity: R = 0.0178 * 1000 / CSA (ohm/km).
 CABLES = [
-    (150,  0.115, 2 * 0.3476 * 150),
-    (185,  0.093, 2 * 0.3476 * 185),
-    (240,  0.072, 2 * 0.3476 * 240),
-    (300,  0.057, 2 * 0.3476 * 300),
-    (400,  0.043, 2 * 0.3476 * 400),
-    (500,  0.034, 2 * 0.3476 * 500),
-    (630,  0.027, 2 * 0.3476 * 630),
-    (800,  0.022, 2 * 0.3476 * 800),
-    (1000, 0.017, 2 * 0.3476 * 1000),
+    (70,  0.254, 4 * 0.3476 * 70),
+    (95,  0.187, 4 * 0.3476 * 95),
+    (120, 0.148, 4 * 0.3476 * 120),
+    (150, 0.119, 4 * 0.3476 * 150),
+    (185, 0.096, 4 * 0.3476 * 185),
+    (240, 0.074, 4 * 0.3476 * 240),
+    (300, 0.059, 4 * 0.3476 * 300),
+    (400, 0.045, 4 * 0.3476 * 400),
+    (500, 0.036, 4 * 0.3476 * 500),
 ]
 
-ONSHORE_INVERTER_COST = 102_500.0   # $ per site (CBS-A30 1.2.3.4.5)
+# Step-up transformer cost — Collin 2017 Eq. 2, LV:MV Wet (same coefficients
+# as VP). Applied per device to S = P_device / PF (MVA); $0 when step-up is off.
+# S = 0.500 / 0.95 = 0.526 MVA -> ~$354k/device. See electrical/methodology.md.
+if STEPUP_KV is not None:
+    _S_mva = (P_DEVICE_KW / PF) / 1000.0
+    C_TRANSFORMER_PER_DEVICE = 454_800.0 * _S_mva**0.6329 + 51_115.0
+else:
+    C_TRANSFORMER_PER_DEVICE = 0.0
 
 # =========================================================================
 # Cost parameters — Device (capex/capex_cost_components.md §1)

@@ -37,18 +37,21 @@ This is a more conservative scope than ORPC's own application of the rate.
 
 ## 2. Electrical Infrastructure (C_elec)
 
-Subsea DC cable from each device to shore, plus an onshore DC→AC inverter station at each
-site. Each ORPC TidGen 2.0 deployed at a candidate site has its own subsea cable directly to
-shore, carrying 1000 VDC; the cable cross-section is sized per site to keep transmission loss
-≤ 10% for ORPC's 500 A rated current.
+Per-device 480 V → 6.6 kV seabed step-up transformer, plus a subsea 3-core AC cable from each
+device to shore. Each ORPC TidGen 2.0 deployed at a candidate site has its own radial cable
+directly to shore; at 6.6 kV the cross-section sits at the 70 mm² catalog floor across the
+device's ≤5 km envelope (loss ≪ 10%). No onshore inverter station — retired with the DC
+architecture (see `electrical/methodology.md`, "Why not 1000 VDC").
 
 Source: see `electrical/source_data.md` and `electrical/methodology.md`.
 
-    C_elec_ORPC(site) = C_cable_ORPC(L_shore) + 102,500     ($)
+    C_transformer      = 454,800 × S^0.6329 + 51,115,  S = P/PF = 0.526 MVA  ≈ $354,000/device
+    C_cable_ORPC(site) = C_cable(L_shore)     (70 mm² @ $97/m within 5 km)
 
-Cable cost from Nakhai (2023) Eq. 3 (`$/m = 0.3476 × CSA × 2` for DC monopolar). Selection
-table by shore distance is in `electrical/source_data.md`. Onshore inverter cost from ORPC
-CBS-A30 1.2.3.4.5 (single-device value).
+The transformer is site-independent (one per device) and enters constant CapEx (N-only); the
+cable is the only shore-distance-driven electrical term. Cable cost from Nakhai (2023) Eq. 3
+(`$/m = 4 × 0.3476 × CSA` for 3-phase AC); transformer from Collin et al. (2017) Eq. 2 (LV:MV
+Wet). See `../optimization_cost_structure.md` for the C_const / c_site split.
 
 ## 3. Installation (C_inst)
 
@@ -109,7 +112,7 @@ ORPC's published CBS values are at fixed device counts and don't provide a scali
 ## Total CapEx
 
     C_device_total = Σ C_device_ORPC(i),  i = 1..N      (with learning rate, see Section 1)
-    C_elec         = Σ [C_cable(L_i) + 102,500]         summed over selected sites
+    C_elec         = N · C_transformer + Σ C_cable(L_i)  (transformer N-only; cable per selected site)
     C_inst         = C_inst_tow + C_inst_moor + C_inst_cable + C_mooring_mat
     C_subsys       = 0.10 × C_device_total
     C_contin       = 0.10 × (C_device_total + C_subsys + C_inst)

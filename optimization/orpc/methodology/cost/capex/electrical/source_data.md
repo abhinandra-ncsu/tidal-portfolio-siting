@@ -2,115 +2,105 @@
 
 ## Device Electrical Specifications
 
-See `../../turbine_design_specification.md` for primary citations. Values used in this
-component:
+See `../../turbine_design_specification.md` for primary citations. Values used in this component:
 
 | Parameter | Value |
 |---|---|
-| Subsea transmission voltage | 1000 VDC |
-| Subsea cable architecture | DC monopolar, 2 conductors |
+| Generation voltage | 480 V AC, 3-phase |
+| Transmission voltage | 6.6 kV (per-device step-up) |
 | Per-device rated power | 500 kW |
-| Rated DC current | 500 A (= P / V) |
-| Grid-side voltage | 3-Phase AC, 277/480 V, 60 Hz |
+| Power factor | 0.95 |
+| Transmission current | 46.0 A = P / (√3 · V · PF) |
 
-## Onshore Inverter Station
-
-From CBS-A30, single-device column (cell I189):
-
-| CBS # | Item | Cost ($) |
-|---|---|---:|
-| 1.2.3.4.5 | Onshore Substations (single device) | 102,500 |
-
-For our single-device-per-site model, this is the per-site cost of the onshore DC→AC inverter station.
+The retired DC architecture (1000 VDC subsea, DC-monopolar 2-conductor, 500 A) is superseded — see
+`methodology.md`, "Why not 1000 VDC." There is no onshore inverter station in the current model.
 
 ## Cable Specifications
 
-From **ABB XLPE Submarine Cable Systems, Rev 5, Table 35**: Single-core copper cables, rated voltage 10–90 kV, 5 mm copper armour. DC monopolar deployment uses two single-core cables (positive + negative).
+From **ABB XLPE Submarine Cable Systems, Rev 5, Table 41**: three-core cables, nominal voltage
+10 kV (Um = 12 kV), copper wire screen. Same catalog as VP (6.6 kV operation is covered by the
+10 kV insulation class).
 
-| CSA (mm²) | Ampacity, wide spacing (A) |
+| CSA (mm²) | R (Ω/km) |
 |---:|---:|
-| 95 | 410 |
-| 120 | 465 |
-| 150 | 520 |
-| 185 | 585 |
-| 240 | 670 |
-| 300 | 750 |
-| 400 | 840 |
-| 500 | 940 |
-| 630 | 1050 |
-| 800 | 1160 |
-| 1000 | 1265 |
-
-ABB Table 35 Note 4: cross sections larger than 1000 mm² can be offered on request. We restrict
-the selection to standard catalog sizes (≤ 1000 mm²).
-
-A cable can only be used if its rated ampacity ≥ ORPC's 500 A device current. The smallest
-CSA that meets this is **150 mm²** (520 A wide-spacing rating); 95 and 120 mm² cables
-(410 A and 465 A) fail the criterion and are excluded regardless of distance.
+| 70 | 0.254 |
+| 95 | 0.187 |
+| 120 | 0.148 |
+| 150 | 0.119 |
+| 185 | 0.096 |
+| 240 | 0.074 |
+| 300 | 0.059 |
+| 400 | 0.045 |
+| 500 | 0.036 |
 
 ## Cable Cost Model
 
-From **Nakhai (2023)** NREL/TP-5700-87184, Equation 3:
+From **Nakhai (2023)** Eq. 3: cost per length per conductor = 0.3476 × CSA ($/m/conductor). For
+3-phase AC (4 conductors per Nakhai): $/m = 4 × 0.3476 × CSA. Same as VP.
 
-    $/m/conductor = 0.3476 × CSA       (CSA in mm²)
-
-For DC the model assumes 2 conductors (positive + negative):
-
-    $/m_total = 0.3476 × CSA × 2
-
-| CSA (mm²) | Cost ($/m, 2-conductor DC) |
+| CSA (mm²) | Cost ($/m) |
 |---:|---:|
-| 150 | 104 |
-| 185 | 129 |
-| 240 | 167 |
-| 300 | 209 |
-| 400 | 278 |
-| 500 | 348 |
-| 630 | 438 |
-| 800 | 556 |
-| 1000 | 695 |
+| 70 | 97 |
+| 95 | 132 |
+| 120 | 167 |
+| 150 | 209 |
+| 185 | 257 |
+| 240 | 334 |
+| 300 | 417 |
+| 400 | 556 |
+| 500 | 695 |
 
-## Resistance and Transmission Loss
+## Transmission Loss at 6.6 kV
 
-Per-conductor resistance from copper resistivity ρ = 1.724 × 10⁻⁸ Ω·m:
+3-phase loss with I = 46.0 A, P = 500 kW:
 
-    R = 17.24 / CSA       (Ω/km, CSA in mm²)
+```
+% loss = 3 × I² × R × L / P = 1.272 × R × L     (R in Ω/km, L in km)
+```
 
-DC monopolar loss (current flows through both conductors in series from the load's perspective):
+| Distance | 70 mm² loss |
+|---:|---:|
+| 1 km | 0.3% |
+| 2 km | 0.6% |
+| 5 km | 1.6% |
 
-    % loss = 2 × I² × R × L / P  =  17.24 × L / CSA       (L in km, CSA in mm², I = 500 A, P = 500 kW)
+At 6.6 kV the 70 mm² floor cable clears the entire ≤5 km device envelope; larger cross-sections are
+never required, and the 10% loss cap never binds.
 
-| CSA (mm²) | R (Ω/km) | Max distance at 10% loss (km) |
-|---:|---:|---:|
-| 150 | 0.115 | 0.87 |
-| 185 | 0.093 | 1.07 |
-| 240 | 0.072 | 1.39 |
-| 300 | 0.057 | 1.74 |
-| 400 | 0.043 | 2.32 |
-| 500 | 0.034 | 2.90 |
-| 630 | 0.027 | 3.65 |
-| 800 | 0.022 | 4.64 |
-| 1000 | 0.017 | 5.80 |
-
-## Cable Selection (at 10% loss threshold, with 150 mm² ampacity floor)
+## Cable Selection (6.6 kV, 10% loss threshold)
 
 | Shore distance (km) | Selected CSA (mm²) | Cost ($/m) | Binding constraint |
 |---:|---:|---:|---|
-| 0 – 0.87 | 150 | 104 | ampacity |
-| 0.87 – 1.07 | 185 | 129 | loss |
-| 1.07 – 1.39 | 240 | 167 | loss |
-| 1.39 – 1.74 | 300 | 209 | loss |
-| 1.74 – 2.32 | 400 | 278 | loss |
-| 2.32 – 2.90 | 500 | 348 | loss |
-| 2.90 – 3.65 | 630 | 438 | loss |
-| 3.65 – 4.64 | 800 | 556 | loss |
-| 4.64 – 5.80 | 1000 | 695 | loss |
+| 0 – 5 (device max) | 70 | 97 | catalog floor (loss ≪ 10%) |
 
-Beyond ~5.80 km, even the 1000 mm² cable exceeds 10% loss.
+## Comparison Arm (480 V, no step-up)
+
+3-phase loss with I = 633 A, P = 500 kW: `% loss = 240.3 × R × L`.
+
+| Distance | 240 mm² | 300 mm² | 400 mm² | 500 mm² |
+|---:|---:|---:|---:|---:|
+| 0.5 km | 8.9% | 7.1% | 5.4% | 4.3% |
+| 1.0 km | 17.8% | 14.2% | 10.8% | 8.7% |
+
+At 480 V the loss cap forces ≥240 mm² at 0.5 km and is exceeded past ~1.15 km even on 500 mm²;
+the 633 A current additionally pushes ampacity toward the large cross-sections at any distance.
+The arm is effectively infeasible past ~1 km.
+
+## Step-Up Transformer
+
+From **Collin et al. (2017)** Eq. 2, LV:MV Wet:
+
+```
+C_transformer = 454,800 × S^0.6329 + 51,115     (S = rating in MVA)
+S = P / PF = 0.500 / 0.95 = 0.526 MVA
+C_transformer ≈ $354,000 per device
+```
+
+Site-independent (one per device); enters constant CapEx (N-only). See `../optimization_cost_structure.md`.
 
 ## References
 
-- ABB. *XLPE Submarine Cable Systems: Attachment to XLPE Land Cable Systems – User's Guide*. Rev 5. Table 35 (single-core, 10–90 kV).
-- Marnagh, C. & McEntee, J. (2018). *D7.2.7 Revised LCOE Cost and Performance Template*. DOE MHKDR Submission 269. CBS-A30 cell I189 (1.2.3.4.5 Onshore Substations).
+- ABB. *XLPE Submarine Cable Systems: Attachment to XLPE Land Cable Systems – User's Guide*. Rev 5. Table 41 (three-core, 10 kV).
 - Nakhai, A.Y. (2023). *Electrical Infrastructure Cost Model for Marine Energy Systems*. NREL/TP-5700-87184. Eq. 3.
+- Collin, A.J. et al. (2017). "Electrical Components for Marine Renewable Energy Arrays: A Techno-Economic Review." *Energies* 10(12): 1973. Eq. 2.
 - Device parameter primary citations: see `../../turbine_design_specification.md`.

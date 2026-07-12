@@ -4,7 +4,7 @@
 
 Pick where to deploy `N` ORPC TidGen 2.0 devices along the US East Coast so that the *aggregate* hourly power timeseries has the smallest possible variance, subject to a portfolio-level levelized-cost-of-energy (LCOE) ceiling.
 
-Each candidate site holds at most one device, and that device runs a dedicated DC subsea cable directly to shore — no array cables, no shared offshore substation. See `turbine_design_specification.md` for device parameters and `cost/capex/electrical/methodology.md` for the cable design.
+Each candidate site holds at most one device, and that device transmits to shore on its own radial 3-core AC cable via a per-device step-up to 6.6 kV — no array cables, no shared offshore substation. See `turbine_design_specification.md` for device parameters and `cost/capex/electrical/methodology.md` for the step-up and cable design.
 
 Implementation: `optimization/orpc/05_optimize.py`.
 
