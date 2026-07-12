@@ -65,7 +65,7 @@ For ORPC TidGen 2.0 with BTMS, this represents the per-device cost of mooring ch
 
 ## Currency Conversion
 
-EUR → USD at **1.09** (Mattia 2025 vintage).
+EUR → USD at **1.08** (2024 annual average ECB rate), matching the VP config for cross-device consistency.
 
 ## References
 

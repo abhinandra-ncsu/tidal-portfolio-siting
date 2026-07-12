@@ -61,9 +61,9 @@ Source: see `installation/source_data.md` and `installation/methodology.md`.
     tug_days        = 2 + 1.0  × N + 2
     multicat_days   = 2 + 7.33 × N + 2
 
-    C_inst_tow      = tug_days      × $3,674/day
-    C_inst_moor     = multicat_days × $3,767/day
-    C_inst_cable    = 175,130 × L_total                 [Mattia Eq. 74, per-meter direct]
+    C_inst_tow      = tug_days      × $3,641/day
+    C_inst_moor     = multicat_days × $3,732/day
+    C_inst_cable    = 173,500 × L_total                 [Mattia Eq. 74, per-meter direct]
     C_mooring_mat   = $40,000 × N
 
     C_inst = C_inst_tow + C_inst_moor + C_inst_cable + C_mooring_mat

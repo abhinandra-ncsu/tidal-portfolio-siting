@@ -23,12 +23,12 @@ tidal turbines.
 platform at typical towing speeds (7.4–9.3 km/h per Mattia).
 **Day rate:** From Mattia Table 2.1-12 tier 2 (25 ≤ x < 70):
 
-    2.18 × 50 + 3261.61 = 3,371 EUR/day  =  $3,674/day  at 1.09 EUR/USD
+    2.18 × 50 + 3261.61 = 3,371 EUR/day  =  $3,641/day  at 1.08 EUR/USD
 
 **Time:** 1 day per device on-site (towing + positioning), plus 2 days transit each way.
 
     tug_days   = 2 + 1.0 × N + 2
-    C_inst_tow = tug_days × $3,674/day
+    C_inst_tow = tug_days × $3,641/day
 
 ## Phase 2: Mooring Installation
 
@@ -37,13 +37,13 @@ use of a multicat vessel").
 **LOA:** 26 m, matching Mattia's MV C-Odyssey case-study reference vessel.
 **Day rate:** From Mattia Table 2.1-12 tier 1 (21 ≤ x < 28):
 
-    63.23 × 26 + 1812.4 = 3,456 EUR/day  =  $3,767/day
+    63.23 × 26 + 1812.4 = 3,456 EUR/day  =  $3,732/day
 
 **Time per device:** 4 lines × (12 h anchor + 22 h line + 10 h connection) = 176 h = 7.33 days,
 plus 2 days transit each way.
 
     multicat_days = 2 + 7.33 × N + 2
-    C_inst_moor   = multicat_days × $3,767/day
+    C_inst_moor   = multicat_days × $3,732/day
 
 ## Phase 3: Cable Installation
 
@@ -65,8 +65,8 @@ these are inside the €/m.
 
     L_total      = sum of shore distances over selected sites (km)
     c_blend      = (2/3) × 100 + (1/3) × 282 = 160.67 €/m   [Mattia Eq. 74]
-    C_inst_cable = c_blend × L_total × 1000 × 1.09 USD/EUR
-                 ≈ $175,130 × L_total
+    C_inst_cable = c_blend × L_total × 1000 × 1.08 USD/EUR
+                 ≈ $173,500 × L_total
 
 ## Mooring Materials
 

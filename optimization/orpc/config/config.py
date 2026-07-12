@@ -136,8 +136,8 @@ LEARNING_EXP = np.log(1 - LEARNING_RATE) / np.log(2)   # b = -0.152
 # =========================================================================
 # Cost parameters — Installation (capex/installation/methodology.md)
 # =========================================================================
-TUG_DAY_RATE = 3_674.0                # $/day (Mattia tier-2 tug, EUR→USD)
-MULTICAT_DAY_RATE = 3_767.0           # $/day (Mattia tier-1 multicat, EUR→USD)
+TUG_DAY_RATE = 3_641.0                # $/day (Mattia tier-2 tug, 3,371 EUR × 1.08)
+MULTICAT_DAY_RATE = 3_732.0           # $/day (Mattia tier-1 multicat, 3,456 EUR × 1.08)
 TUG_DAYS_PER_DEVICE = 1.0             # tow time per device
 MULTICAT_DAYS_PER_DEVICE = 7.33       # 4 lines × (12+22+10) h / 24
 TRANSIT_DAYS = 2.0                    # one-way transit (tug + multicat)
@@ -145,8 +145,8 @@ MOORING_MAT_PER_DEVICE = 40_000.0     # $/device (CBS-A30 1.2.8)
 
 # Cable installation: per-meter bundled metric (Mattia Eqs. 72-74).
 # Bundles vessel charter (CLV), drilling rig, mob, crew, consumables.
-# c_blend = (2/3)×100 + (1/3)×282 = 160.67 €/m × 1.09 USD/EUR × 1000 m/km
-CABLE_INST_PER_KM = 175_130.3    # $/km
+# c_blend = (2/3)×100 + (1/3)×282 = 160.67 €/m × 1.08 USD/EUR × 1000 m/km
+CABLE_INST_PER_KM = 173_523.6    # $/km
 
 # =========================================================================
 # Cost parameters — Percentages (Hassan 2024)
