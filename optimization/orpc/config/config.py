@@ -174,14 +174,16 @@ CABLE_INST_PER_KM = 173_523.6    # $/km
 SUBSYS_FRAC = 0.10
 CONTIN_FRAC = 0.10
 EC_FRAC = 0.05
-INSURE_FRAC = 0.0    # ORPC OpEx is bundled — insurance not added separately
+INSURE_FRAC = 0.01   # 1% × CapEx, harmonized with VP (MeyGen 0.87% actual)
 
 # =========================================================================
 # Cost parameters — OpEx (cost/opex/opex_cost_components.md)
 # =========================================================================
-# ORPC publishes a single bundled per-device annual OpEx; no replace/repair
-# split, no separate insurance term.
-OPEX_FIXED_PER_TF = 160_422.0          # $/yr per device (LCOE Summary F7)
+# ORPC publishes a bundled per-device annual OpEx of $160,422 (LCOE Summary F7).
+# Its explicit insurance line (CBS 2.1.3, $20,000/device) is stripped and
+# re-modeled as 1% × CapEx via INSURE_FRAC (harmonized with VP); the remaining
+# $140,422 non-insurance bundle is carried here.
+OPEX_FIXED_PER_TF = 140_422.0          # $/yr per device ($160,422 − $20,000 insurance)
 
 # =========================================================================
 # Annualization

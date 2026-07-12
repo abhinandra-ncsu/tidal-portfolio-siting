@@ -5,6 +5,8 @@ How CapEx and OpEx components feed into the LCOE constraint of the BQP. Costs sp
 Implementation: `compute_c_const(N)` and `compute_c_site(...)` in `optimization/orpc/05_optimize.py`. See `capex/capex_cost_components.md` and `opex/opex_cost_components.md` for how each component is computed at the methodology level.
 
 > **Status (2026-07-12):** this doc reflects the electrical rework (480 V generation → 6.6 kV AC step-up; onshore inverter removed; step-up transformer added to C_const). The code (`config/config.py`, `05_optimize.py`) has been **reconciled to match** this spec. Results still need **re-running** — the local `candidates.nc`/`covariance.nc` were deleted, so regenerate via `01`/`03` (or run on the remote). The 480 V comparison arm runs with `TIDAL_STEPUP_KV=0`.
+>
+> **Insurance harmonization (2026-07-12):** insurance is now re-modeled as 1% × CapEx (`INSURE_FRAC = 0.01`), matching the VP pipeline, with ORPC's bundled $20k insurance line stripped from OpEx ($160,422 → $140,422/device). The code has been **reconciled** — `config/config.py` now has `INSURE_FRAC = 0.01` and `OPEX_FIXED_PER_TF = 140_422.0`, and the `c_site` / `c_const` formulas already carried the `INSURE_FRAC × CapEx` term. Results still need **re-running**; this also invalidates the existing ORPC sweep and the VP-vs-ORPC comparison.
 
 ---
 

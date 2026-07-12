@@ -120,9 +120,11 @@ def compute_c_const(N):
     Includes: device manufacturing (learning curve), tow + moor installation
     (tug + multicat), per-device mooring materials, the per-device step-up
     transformer, subsystem integration, constant portions of
-    contingency/compliance, and bundled OpEx. Cable installation is fully
-    portfolio-dependent (Mattia per-meter bundled metric); ORPC's
-    $160,422/device OpEx already bundles insurance, so INSURE_FRAC is 0.
+    contingency/compliance, the non-insurance OpEx bundle, and the constant
+    (device + BOS) share of insurance. Cable installation is fully
+    portfolio-dependent (Mattia per-meter bundled metric); insurance is
+    re-modeled as 1% × CapEx (INSURE_FRAC = 0.01), harmonized with VP —
+    ORPC's bundled $20k insurance line is stripped from OPEX_FIXED_PER_TF.
     """
     # Device manufacturing with learning curve
     units = np.arange(1, N + 1, dtype=np.float64)
@@ -162,7 +164,7 @@ def compute_c_const(N):
     # Annualized constant cost
     annual_capex = FCR * capex_const
     annual_opex = OPEX_FIXED_PER_TF * N
-    annual_insurance_const = INSURE_FRAC * capex_const  # 0 for ORPC (bundled)
+    annual_insurance_const = INSURE_FRAC * capex_const  # 1% × CapEx (VP-harmonized)
 
     c_const = annual_capex + annual_opex + annual_insurance_const
     return c_const
@@ -186,7 +188,7 @@ def compute_c_site(cable_cost_total, laying_cost):
     # Total portfolio-dependent CapEx for this site
     capex_pd = cable_cost_total + laying_cost + contin_pd + ec_pd
 
-    # Annualized: FCR * CapEx + insurance (0 for ORPC, bundled in OpEx)
+    # Annualized: FCR * CapEx + insurance (1% × CapEx, VP-harmonized)
     c_site = FCR * capex_pd + INSURE_FRAC * capex_pd
     return c_site
 
