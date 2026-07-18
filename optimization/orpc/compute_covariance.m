@@ -124,7 +124,7 @@ fprintf('\nTime: %s to %s, %d steps\n', datestr(cfg.tmin), datestr(cfg.tmax), n_
 
 %% Reconstruct power timeseries (parallel)
 pool = gcp('nocreate');
-if isempty(pool), pool = parpool; end
+if isempty(pool), pool = parpool('Threads', 8); end  % Threads: process pool fails on this box (worker shut down status 1)
 fprintf('Using %d workers for %d candidates\n\n', pool.NumWorkers, n_cand);
 
 power_matrix = zeros(n_times, n_cand, 'single');

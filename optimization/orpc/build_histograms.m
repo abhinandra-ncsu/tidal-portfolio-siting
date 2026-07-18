@@ -104,7 +104,7 @@ fprintf('  Matched %d constituents to T_TIDE\n', n_con);
 
 %% Reconstruct speeds and build histograms (parallel)
 pool = gcp('nocreate');
-if isempty(pool), pool = parpool; end
+if isempty(pool), pool = parpool('Threads', 8); end  % Threads: process pool fails on this box (worker shut down status 1)
 fprintf('Using %d workers for %d points\n\n', pool.NumWorkers, n_pts);
 
 histograms  = zeros(n_pts, n_bins);
