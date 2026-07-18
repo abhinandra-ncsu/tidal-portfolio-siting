@@ -11,6 +11,9 @@ experiments/**
 # Local writing drafts (abstracts, notes, briefs) — keep local, not in the code repo
 writing/
 
+# Agent docs — keep local
+docs/
+
 # Third-party tidal dataset (obtain separately, see README)
 inputs/roms/tide_data_east.dbf
 
